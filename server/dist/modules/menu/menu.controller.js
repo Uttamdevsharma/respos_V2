@@ -1,41 +1,90 @@
 import { MenuService } from './menu.service.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { catchAsync } from '../../utils/catchAsync.js';
+import { ApiError } from '../../utils/ApiError.js';
+import { uploadBufferToCloudinary, deleteFromCloudinary } from '../../config/cloudinary.js';
 export class MenuController {
     static getAll = catchAsync(async (req, res) => {
+        const restaurantId = req.user?.restaurant_id;
+        if (!restaurantId)
+            throw ApiError.forbidden('Restaurant context missing');
         const categoryId = req.query.category;
-        const items = await MenuService.getAll(categoryId);
+        const items = await MenuService.getAll(restaurantId, categoryId);
         ApiResponse.success(res, items);
     });
     static getById = catchAsync(async (req, res) => {
-        const item = await MenuService.getById(req.params.id);
+        const restaurantId = req.user?.restaurant_id;
+        if (!restaurantId)
+            throw ApiError.forbidden('Restaurant context missing');
+        const item = await MenuService.getById(req.params.id, restaurantId);
         ApiResponse.success(res, item);
     });
     static create = catchAsync(async (req, res) => {
+        const restaurantId = req.user?.restaurant_id;
+        if (!restaurantId)
+            throw ApiError.forbidden('Restaurant context missing');
         const input = { ...req.body };
         if (req.file) {
-            input.image = `/uploads/${req.file.filename}`;
+            const uploadRes = await uploadBufferToCloudinary(req.file, 'menu');
+            input.image = uploadRes.secure_url;
         }
-        const item = await MenuService.create(input);
+        if (typeof input.optionGroups === 'string') {
+            try {
+                input.optionGroups = JSON.parse(input.optionGroups);
+            }
+            catch {
+                input.optionGroups = [];
+            }
+        }
+        const item = await MenuService.create(input, restaurantId);
         ApiResponse.created(res, item);
     });
     static update = catchAsync(async (req, res) => {
+        const restaurantId = req.user?.restaurant_id;
+        if (!restaurantId)
+            throw ApiError.forbidden('Restaurant context missing');
         const input = { ...req.body };
+        const existing = await MenuService.getById(req.params.id, restaurantId);
         if (req.file) {
-            input.image = `/uploads/${req.file.filename}`;
+            const uploadRes = await uploadBufferToCloudinary(req.file, 'menu');
+            input.image = uploadRes.secure_url;
+            if (existing?.image) {
+                deleteFromCloudinary(existing.image).catch(() => { });
+            }
         }
         else if (req.body.removeImage === 'true' || req.body.removeImage === true) {
             input.image = null;
+            if (existing?.image) {
+                deleteFromCloudinary(existing.image).catch(() => { });
+            }
         }
-        const item = await MenuService.update(req.params.id, input);
+        if (typeof input.optionGroups === 'string') {
+            try {
+                input.optionGroups = JSON.parse(input.optionGroups);
+            }
+            catch {
+                input.optionGroups = [];
+            }
+        }
+        const item = await MenuService.update(req.params.id, input, restaurantId);
         ApiResponse.success(res, item);
     });
     static delete = catchAsync(async (req, res) => {
-        await MenuService.delete(req.params.id);
+        const restaurantId = req.user?.restaurant_id;
+        if (!restaurantId)
+            throw ApiError.forbidden('Restaurant context missing');
+        const existing = await MenuService.getById(req.params.id, restaurantId);
+        await MenuService.delete(req.params.id, restaurantId);
+        if (existing?.image) {
+            deleteFromCloudinary(existing.image).catch(() => { });
+        }
         ApiResponse.success(res, null, 'Menu item deleted');
     });
     static toggleAvailability = catchAsync(async (req, res) => {
-        const item = await MenuService.toggleAvailability(req.params.id);
+        const restaurantId = req.user?.restaurant_id;
+        if (!restaurantId)
+            throw ApiError.forbidden('Restaurant context missing');
+        const item = await MenuService.toggleAvailability(req.params.id, restaurantId);
         ApiResponse.success(res, item, 'Availability toggled');
     });
 }

@@ -1,19 +1,25 @@
+import mongoose from 'mongoose';
 import Order from '../../models/Order.js';
 import Table from '../../models/Table.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { catchAsync } from '../../utils/catchAsync.js';
+import { ApiError } from '../../utils/ApiError.js';
 const TZ = '+06:00';
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export class DashboardController {
     static getReports = catchAsync(async (req, res) => {
+        const restaurantId = req.user?.restaurant_id;
+        if (!restaurantId)
+            throw ApiError.forbidden('Restaurant context missing');
+        const restObjId = new mongoose.Types.ObjectId(restaurantId);
         const type = req.query.type || 'daily';
-        const dateParam = req.query.date; // YYYY-MM-DD for 'date' type or 'daily'
-        const startDateParam = req.query.startDate; // YYYY-MM-DD for range
-        const endDateParam = req.query.endDate; // YYYY-MM-DD for range
-        const yearParam = req.query.year; // YYYY
-        const monthParam = req.query.month; // MM (1-12)
-        const weekStartParam = req.query.weekStart; // YYYY-MM-DD
+        const dateParam = req.query.date;
+        const startDateParam = req.query.startDate;
+        const endDateParam = req.query.endDate;
+        const yearParam = req.query.year;
+        const monthParam = req.query.month;
+        const weekStartParam = req.query.weekStart;
         const now = new Date();
         let matchStart;
         let matchEnd = null;
@@ -21,7 +27,6 @@ export class DashboardController {
         let labelFn;
         let fillLabels;
         if (type === 'daily') {
-            // Today (or specified date), hour by hour
             const target = dateParam ? new Date(dateParam) : new Date(now);
             target.setHours(0, 0, 0, 0);
             matchStart = target;
@@ -40,7 +45,6 @@ export class DashboardController {
         }
         else if (type === 'date') {
             if (startDateParam && endDateParam) {
-                // Date range query (e.g. 1st to 10th of a month)
                 const start = new Date(startDateParam);
                 start.setHours(0, 0, 0, 0);
                 const end = new Date(endDateParam);
@@ -48,7 +52,6 @@ export class DashboardController {
                 matchStart = start;
                 matchEnd = end;
                 groupFormat = '%Y-%m-%d';
-                // Generate daily labels
                 const labels = [];
                 const current = new Date(start);
                 while (current <= end) {
@@ -62,7 +65,6 @@ export class DashboardController {
                 };
             }
             else {
-                // Specific date chosen by user — hour by hour
                 const target = dateParam ? new Date(dateParam) : new Date(now);
                 target.setHours(0, 0, 0, 0);
                 matchStart = target;
@@ -79,13 +81,12 @@ export class DashboardController {
             }
         }
         else if (type === 'weekly') {
-            // 7 days, starting from custom date or current week Mon
             let start;
             if (weekStartParam) {
                 start = new Date(weekStartParam);
             }
             else {
-                const dow = now.getDay(); // 0=Sun
+                const dow = now.getDay();
                 const diffToMon = dow === 0 ? -6 : 1 - dow;
                 start = new Date(now);
                 start.setDate(now.getDate() + diffToMon);
@@ -107,7 +108,6 @@ export class DashboardController {
             };
         }
         else if (type === 'monthly') {
-            // Selectable month of a year
             const year = yearParam ? parseInt(yearParam, 10) : now.getFullYear();
             const monthVal = monthParam ? parseInt(monthParam, 10) : (now.getMonth() + 1);
             matchStart = new Date(year, monthVal - 1, 1);
@@ -126,7 +126,6 @@ export class DashboardController {
             };
         }
         else {
-            // yearly — selectable year, month by month
             const year = yearParam ? parseInt(yearParam, 10) : now.getFullYear();
             matchStart = new Date(year, 0, 1);
             matchEnd = new Date(year, 11, 31, 23, 59, 59, 999);
@@ -141,13 +140,13 @@ export class DashboardController {
             };
         }
         const baseMatch = {
+            restaurant_id: restObjId,
             createdAt: matchEnd
                 ? { $gte: matchStart, $lte: matchEnd }
                 : { $gte: matchStart },
             status: 'completed',
         };
-        const [chartRaw, topItemsRaw, paymentRaw, summaryRaw] = await Promise.all([
-            // Chart data aggregation
+        const [chartRaw, topItemsRaw, paymentRaw, summaryRaw, channelRaw] = await Promise.all([
             Order.aggregate([
                 { $match: baseMatch },
                 {
@@ -159,7 +158,6 @@ export class DashboardController {
                 },
                 { $sort: { _id: 1 } },
             ]),
-            // Top 5 selling items
             Order.aggregate([
                 { $match: baseMatch },
                 { $unwind: '$items' },
@@ -173,7 +171,6 @@ export class DashboardController {
                 { $sort: { quantity: -1 } },
                 { $limit: 5 },
             ]),
-            // Payment method breakdown
             Order.aggregate([
                 { $match: baseMatch },
                 {
@@ -184,7 +181,6 @@ export class DashboardController {
                     },
                 },
             ]),
-            // Summary totals
             Order.aggregate([
                 { $match: baseMatch },
                 {
@@ -195,8 +191,18 @@ export class DashboardController {
                     },
                 },
             ]),
+            Order.aggregate([
+                { $match: baseMatch },
+                {
+                    $group: {
+                        _id: { $ifNull: ['$orderType', 'dine_in'] },
+                        count: { $sum: 1 },
+                        totalSales: { $sum: '$grandTotal' },
+                    },
+                },
+                { $sort: { totalSales: -1 } },
+            ]),
         ]);
-        // Build chart data with all labels filled
         const salesMap = new Map(chartRaw.map((item) => [item._id, item]));
         const chartData = fillLabels.map((key) => {
             const existing = salesMap.get(key);
@@ -217,19 +223,24 @@ export class DashboardController {
             chartData,
             topItems: topItemsRaw,
             paymentBreakdown: paymentRaw,
+            channelBreakdown: channelRaw,
         }, 'Sales report retrieved');
     });
-    static getStats = catchAsync(async (_req, res) => {
+    static getStats = catchAsync(async (req, res) => {
+        const restaurantId = req.user?.restaurant_id;
+        if (!restaurantId)
+            throw ApiError.forbidden('Restaurant context missing');
+        const restObjId = new mongoose.Types.ObjectId(restaurantId);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
         sevenDaysAgo.setHours(0, 0, 0, 0);
         const [todaySales, todayOrders, totalTables, activeTables, pendingOrders, preparingOrders, readyOrders, completedOrders, recentOrders, dailySales,] = await Promise.all([
-            // Today's sales (completed orders)
             Order.aggregate([
                 {
                     $match: {
+                        restaurant_id: restObjId,
                         createdAt: { $gte: today },
                         status: 'completed',
                     },
@@ -241,28 +252,23 @@ export class DashboardController {
                     },
                 },
             ]),
-            // Today's order count
-            Order.countDocuments({ createdAt: { $gte: today } }),
-            // Total tables
-            Table.countDocuments(),
-            // Active (occupied) tables
-            Table.countDocuments({ status: 'occupied' }),
-            // Status counts
-            Order.countDocuments({ status: 'pending', createdAt: { $gte: today } }),
-            Order.countDocuments({ status: 'preparing', createdAt: { $gte: today } }),
-            Order.countDocuments({ status: 'ready', createdAt: { $gte: today } }),
-            Order.countDocuments({ status: 'completed', createdAt: { $gte: today } }),
-            // Recent orders (last 10)
-            Order.find()
+            Order.countDocuments({ restaurant_id: restaurantId, createdAt: { $gte: today } }),
+            Table.countDocuments({ restaurant_id: restaurantId }),
+            Table.countDocuments({ restaurant_id: restaurantId, status: 'occupied' }),
+            Order.countDocuments({ restaurant_id: restaurantId, status: 'pending', createdAt: { $gte: today } }),
+            Order.countDocuments({ restaurant_id: restaurantId, status: 'preparing', createdAt: { $gte: today } }),
+            Order.countDocuments({ restaurant_id: restaurantId, status: 'ready', createdAt: { $gte: today } }),
+            Order.countDocuments({ restaurant_id: restaurantId, status: 'completed', createdAt: { $gte: today } }),
+            Order.find({ restaurant_id: restaurantId })
                 .populate('table', 'number')
                 .populate('waiter', 'name')
                 .sort({ createdAt: -1 })
                 .limit(10)
                 .lean(),
-            // Daily sales for the last 7 days
             Order.aggregate([
                 {
                     $match: {
+                        restaurant_id: restObjId,
                         createdAt: { $gte: sevenDaysAgo },
                         status: 'completed',
                     },
@@ -279,7 +285,6 @@ export class DashboardController {
                 },
             ]),
         ]);
-        // Fill missing dates in the last 7 days
         const salesMap = new Map((dailySales || []).map((item) => [item._id, item]));
         const completeDailySales = [];
         for (let i = 6; i >= 0; i--) {

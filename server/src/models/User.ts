@@ -1,12 +1,15 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+export type UserRole = 'SUPER_ADMIN' | 'OWNER' | 'admin' | 'waiter' | 'cashier' | 'kitchen';
+
 export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
-  role: 'admin' | 'waiter' | 'cashier' | 'kitchen';
+  role: UserRole;
   phone?: string;
+  restaurant_id?: mongoose.Types.ObjectId | null;
   isActive: boolean;
   refreshToken?: string | null;
   createdAt: Date;
@@ -37,8 +40,14 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['admin', 'waiter', 'cashier', 'kitchen'],
+      enum: ['SUPER_ADMIN', 'OWNER', 'admin', 'waiter', 'cashier', 'kitchen'],
       default: 'waiter',
+    },
+    restaurant_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Restaurant',
+      default: null,
+      index: true,
     },
     phone: {
       type: String,

@@ -2,11 +2,14 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from './auth.js';
 import { ApiError } from '../utils/ApiError.js';
 
-type Role = 'admin' | 'waiter' | 'cashier' | 'kitchen';
+import { UserRole } from '../models/User.js';
+
+export type Role = UserRole;
 
 /**
  * Role-Based Access Control middleware.
  * Restricts route access to specified roles.
+ * Note: 'OWNER' is automatically authorized if 'admin' is in the allowed roles.
  */
 export const authorize = (...roles: Role[]) => {
   return (req: AuthRequest, _res: Response, next: NextFunction): void => {
@@ -15,8 +18,13 @@ export const authorize = (...roles: Role[]) => {
       return;
     }
 
-    if (!roles.includes(req.user.role)) {
-      next(ApiError.forbidden(`Role '${req.user.role}' is not authorized to access this resource`));
+    const userRole = req.user.role;
+    const isAllowed =
+      roles.includes(userRole) ||
+      (roles.includes('admin') && userRole === 'OWNER');
+
+    if (!isAllowed) {
+      next(ApiError.forbidden(`Role '${userRole}' is not authorized to access this resource`));
       return;
     }
 

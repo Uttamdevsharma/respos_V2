@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../../models/User.js';
+import Restaurant from '../../models/Restaurant.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { env } from '../../config/env.js';
 export class AuthService {
@@ -11,12 +12,32 @@ export class AuthService {
             throw ApiError.unauthorized('Invalid email or password');
         }
         if (!user.isActive) {
-            throw ApiError.forbidden('Your account has been deactivated. Contact admin.');
+            throw ApiError.forbidden('Your account has been deactivated. Please contact support.');
         }
         // Verify password
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
             throw ApiError.unauthorized('Invalid email or password');
+        }
+        let restaurantData = null;
+        // If user is not SUPER_ADMIN, check restaurant status
+        if (user.role !== 'SUPER_ADMIN') {
+            if (user.restaurant_id) {
+                const restaurant = await Restaurant.findById(user.restaurant_id).populate('plan_id');
+                if (!restaurant) {
+                    throw ApiError.forbidden('Associated restaurant not found.');
+                }
+                if (restaurant.status === 'PENDING') {
+                    throw ApiError.forbidden('Your restaurant registration is currently pending Super Admin approval. You will receive an email once approved.');
+                }
+                if (restaurant.status === 'REJECTED') {
+                    throw ApiError.forbidden(`Your restaurant application was rejected: ${restaurant.rejection_reason || 'Please contact support.'}`);
+                }
+                if (restaurant.status === 'SUSPENDED') {
+                    throw ApiError.forbidden('Your restaurant account has been suspended. Please contact platform administration.');
+                }
+                restaurantData = restaurant;
+            }
         }
         // Generate JWT access token
         const token = jwt.sign({ id: user._id }, env.JWT_SECRET, {
@@ -35,6 +56,8 @@ export class AuthService {
             email: user.email,
             role: user.role,
             phone: user.phone,
+            restaurant_id: user.restaurant_id,
+            restaurant: restaurantData,
             isActive: user.isActive,
         };
         return { user: userResponse, token, refreshToken };
@@ -44,7 +67,15 @@ export class AuthService {
         if (!user) {
             throw ApiError.notFound('User not found');
         }
-        return user;
+        let restaurantData = null;
+        if (user.restaurant_id) {
+            restaurantData = await Restaurant.findById(user.restaurant_id).populate('plan_id');
+        }
+        const userObj = user.toObject();
+        return {
+            ...userObj,
+            restaurant: restaurantData,
+        };
     }
 }
 //# sourceMappingURL=auth.service.js.map

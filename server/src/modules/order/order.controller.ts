@@ -1,90 +1,109 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { OrderService } from './order.service.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { catchAsync } from '../../utils/catchAsync.js';
 import { AuthRequest } from '../../middleware/auth.js';
+import { ApiError } from '../../utils/ApiError.js';
 
 export class OrderController {
-  static getAll = catchAsync(async (req: Request, res: Response) => {
+  static getAll = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
     const filters: Record<string, unknown> = {};
     if (req.query.status) filters.status = req.query.status;
     if (req.query.table) filters.table = req.query.table;
-    const orders = await OrderService.getAll(filters);
+    const orders = await OrderService.getAll(restaurantId, filters);
     ApiResponse.success(res, orders);
   });
 
-  static getById = catchAsync(async (req: Request, res: Response) => {
-    const order = await OrderService.getById(req.params.id as string);
+  static getById = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    const order = await OrderService.getById(req.params.id as string, restaurantId);
     ApiResponse.success(res, order);
   });
 
   static create = catchAsync(async (req: AuthRequest, res: Response) => {
-    const order = await OrderService.create(req.body, req.user!._id);
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    const order = await OrderService.create(req.body, req.user!._id, restaurantId);
     ApiResponse.created(res, order, 'Order created');
   });
 
-  static updateStatus = catchAsync(async (req: Request, res: Response) => {
-    const order = await OrderService.updateStatus(req.params.id as string, req.body.status);
+  static updateStatus = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    const order = await OrderService.updateStatus(req.params.id as string, req.body.status, restaurantId);
     ApiResponse.success(res, order, 'Order status updated');
   });
 
-  static getKitchenOrders = catchAsync(async (_req: Request, res: Response) => {
-    try {
-      const orders = await OrderService.getKitchenOrders();
-      ApiResponse.success(res, orders);
-    } catch (error: any) {
-      console.error('Kitchen orders error:', error);
-      throw error;
-    }
+  static getKitchenOrders = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    const orders = await OrderService.getKitchenOrders(restaurantId);
+    ApiResponse.success(res, orders);
   });
 
-  static getBillingOrders = catchAsync(async (_req: Request, res: Response) => {
-    try {
-      const orders = await OrderService.getBillingOrders();
-      ApiResponse.success(res, orders);
-    } catch (error: any) {
-      console.error('Billing orders error:', error);
-      throw error;
-    }
+  static getBillingOrders = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    const orders = await OrderService.getBillingOrders(restaurantId);
+    ApiResponse.success(res, orders);
   });
 
-  static processPayment = catchAsync(async (req: Request, res: Response) => {
-    const order = await OrderService.processPayment(req.params.id as string, req.body);
+  static processPayment = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    const order = await OrderService.processPayment(req.params.id as string, req.body, restaurantId);
     ApiResponse.success(res, order, 'Payment processed successfully');
   });
 
-  static addPartialPayment = catchAsync(async (req: Request, res: Response) => {
-    const order = await OrderService.addPartialPayment(req.params.id as string, req.body);
+  static addPartialPayment = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    const order = await OrderService.addPartialPayment(req.params.id as string, req.body, restaurantId);
     ApiResponse.success(res, order, 'Partial payment recorded');
   });
 
-  static processSplitPayment = catchAsync(async (req: Request, res: Response) => {
-    const order = await OrderService.processSplitPayment(req.params.id as string, req.body);
+  static processSplitPayment = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    const order = await OrderService.processSplitPayment(req.params.id as string, req.body, restaurantId);
     ApiResponse.success(res, order, 'Split payment processed successfully');
   });
 
   static getWaiterOrders = catchAsync(async (req: AuthRequest, res: Response) => {
-    const orders = await OrderService.getWaiterOrders(req.user!._id);
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    const orders = await OrderService.getWaiterOrders(req.user!._id, restaurantId);
     ApiResponse.success(res, orders);
   });
 
-  static addItems = catchAsync(async (req: Request, res: Response) => {
-    const order = await OrderService.addItems(req.params.id as string, req.body);
+  static addItems = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    const order = await OrderService.addItems(req.params.id as string, req.body, restaurantId);
     ApiResponse.success(res, order, 'Items added to order');
   });
 
-  static cancelItem = catchAsync(async (req: Request, res: Response) => {
-    const order = await OrderService.cancelItem(req.params.id as string, req.body);
+  static cancelItem = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    const order = await OrderService.cancelItem(req.params.id as string, req.body, restaurantId);
     ApiResponse.success(res, order, 'Item cancelled from order');
   });
 
-  static delete = catchAsync(async (req: Request, res: Response) => {
-    const order = await OrderService.deleteOrder(req.params.id as string);
+  static delete = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    const order = await OrderService.deleteOrder(req.params.id as string, restaurantId);
     ApiResponse.success(res, order, `Order #${order.token} deleted successfully`);
   });
 
-  static bulkDelete = catchAsync(async (req: Request, res: Response) => {
-    const result = await OrderService.bulkDeleteOrders(req.body.orderIds);
+  static bulkDelete = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    const result = await OrderService.bulkDeleteOrders(req.body.orderIds, restaurantId);
     ApiResponse.success(res, result, `${result.count} orders deleted successfully`);
   });
 }

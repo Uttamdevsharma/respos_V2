@@ -4,12 +4,12 @@ import { CreateExpenseInput } from './expense.validation.js';
 import { ApiError } from '../../utils/ApiError.js';
 
 export class ExpenseService {
-  static async create(input: CreateExpenseInput) {
-    return Expense.create(input);
+  static async create(input: CreateExpenseInput, restaurantId: string) {
+    return Expense.create({ ...input, restaurant_id: restaurantId });
   }
 
-  static async getAll(filters: { startDate?: string; endDate?: string; category?: string }) {
-    const query: any = {};
+  static async getAll(restaurantId: string, filters: { startDate?: string; endDate?: string; category?: string }) {
+    const query: any = { restaurant_id: restaurantId };
 
     if (filters.startDate || filters.endDate) {
       query.date = {};
@@ -30,18 +30,19 @@ export class ExpenseService {
     return Expense.find(query).sort({ date: -1, createdAt: -1 });
   }
 
-  static async delete(id: string) {
-    const expense = await Expense.findById(id);
+  static async delete(id: string, restaurantId: string) {
+    const expense = await Expense.findOne({ _id: id, restaurant_id: restaurantId });
     if (!expense) throw ApiError.notFound('Expense not found');
-    await Expense.findByIdAndDelete(id);
+    await Expense.findOneAndDelete({ _id: id, restaurant_id: restaurantId });
   }
 
-  static async getAccountsSummary(startDateStr: string, endDateStr: string) {
+  static async getAccountsSummary(restaurantId: string, startDateStr: string, endDateStr: string) {
     const start = new Date(startDateStr);
     const end = new Date(endDateStr);
     end.setHours(23, 59, 59, 999);
 
     const orders = await Order.find({
+      restaurant_id: restaurantId,
       status: 'completed',
       createdAt: { $gte: start, $lte: end }
     });
@@ -49,6 +50,7 @@ export class ExpenseService {
     const totalRevenue = orders.reduce((sum, order) => sum + (order.grandTotal || 0), 0);
 
     const expenses = await Expense.find({
+      restaurant_id: restaurantId,
       date: { $gte: start, $lte: end }
     });
 
@@ -57,7 +59,6 @@ export class ExpenseService {
 
     const breakdown: { date: string; revenue: number; expense: number; profit: number }[] = [];
     
-    // Limit breakdown generating to prevent too many loops if interval is huge
     const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     
     if (daysDiff <= 31) {
@@ -81,7 +82,6 @@ export class ExpenseService {
         current.setDate(current.getDate() + 1);
       }
     } else {
-      // Group by month instead of day if date range is longer than a month
       const monthsMap: Record<string, { revenue: number; expense: number }> = {};
       
       orders.forEach(o => {

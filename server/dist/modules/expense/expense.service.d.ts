@@ -1,11 +1,11 @@
 import { CreateExpenseInput } from './expense.validation.js';
 export declare class ExpenseService {
-    static create(input: CreateExpenseInput): Promise<import("mongoose").Document<unknown, {}, import("../../models/Expense.js").IExpense, {}, {}> & import("../../models/Expense.js").IExpense & Required<{
+    static create(input: CreateExpenseInput, restaurantId: string): Promise<import("mongoose").Document<unknown, {}, import("../../models/Expense.js").IExpense, {}, {}> & import("../../models/Expense.js").IExpense & Required<{
         _id: import("mongoose").Types.ObjectId;
     }> & {
         __v: number;
     }>;
-    static getAll(filters: {
+    static getAll(restaurantId: string, filters: {
         startDate?: string;
         endDate?: string;
         category?: string;
@@ -14,8 +14,8 @@ export declare class ExpenseService {
     }> & {
         __v: number;
     })[]>;
-    static delete(id: string): Promise<void>;
-    static getAccountsSummary(startDateStr: string, endDateStr: string): Promise<{
+    static delete(id: string, restaurantId: string): Promise<void>;
+    static getAccountsSummary(restaurantId: string, startDateStr: string, endDateStr: string): Promise<{
         totalRevenue: number;
         totalExpense: number;
         netProfit: number;

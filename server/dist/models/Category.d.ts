@@ -1,5 +1,6 @@
 import mongoose, { Document } from 'mongoose';
 export interface ICategory extends Document {
+    restaurant_id: mongoose.Types.ObjectId;
     name: string;
     description?: string;
     sortOrder: number;

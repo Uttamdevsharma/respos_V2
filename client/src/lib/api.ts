@@ -6,6 +6,8 @@ export const BASE_URL = API_URL.replace('/api', '');
 export function getImageUrl(path?: string | null): string {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  // Next.js client public assets (e.g., /images/...) should be loaded directly from client origin
+  if (path.startsWith('/images/') || path.startsWith('/static/')) return path;
   return `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
@@ -51,6 +53,10 @@ api.interceptors.request.use(
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+      }
+      if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+        // Let the browser set multipart/form-data with proper boundary
+        delete config.headers['Content-Type'];
       }
       config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
       config.headers['Pragma'] = 'no-cache';

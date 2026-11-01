@@ -1,5 +1,20 @@
 import mongoose, { Schema } from 'mongoose';
+const menuItemOptionSchema = new Schema({
+    name: { type: String, required: true, trim: true },
+    price: { type: Number, required: true, default: 0, min: 0 },
+});
+const menuItemOptionGroupSchema = new Schema({
+    title: { type: String, required: true, default: 'Size' },
+    required: { type: Boolean, default: true },
+    options: [menuItemOptionSchema],
+});
 const menuItemSchema = new Schema({
+    restaurant_id: {
+        type: Schema.Types.ObjectId,
+        ref: 'Restaurant',
+        required: true,
+        index: true,
+    },
     name: {
         type: String,
         required: [true, 'Menu item name is required'],
@@ -27,6 +42,7 @@ const menuItemSchema = new Schema({
         type: Boolean,
         default: true,
     },
+    optionGroups: [menuItemOptionGroupSchema],
 }, {
     timestamps: true,
 });

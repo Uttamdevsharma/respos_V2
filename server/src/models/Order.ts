@@ -28,6 +28,7 @@ export type PaymentMethod = 'cash' | 'card' | 'mobile';
 export type OrderType = 'dine_in' | 'takeaway' | 'foodpanda' | 'pathao' | 'foodi' | 'delivery';
 
 export interface IOrder extends Document {
+  restaurant_id: mongoose.Types.ObjectId;
   token: string;
   table?: mongoose.Types.ObjectId | null;
   waiter: mongoose.Types.ObjectId;
@@ -104,6 +105,12 @@ const partialPaymentSchema = new Schema<IPartialPayment>(
 
 const orderSchema = new Schema<IOrder>(
   {
+    restaurant_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Restaurant',
+      required: true,
+      index: true,
+    },
     token: {
       type: String,
       required: true,

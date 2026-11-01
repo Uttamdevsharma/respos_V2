@@ -1,5 +1,11 @@
 import mongoose, { Schema } from 'mongoose';
 const expenseSchema = new Schema({
+    restaurant_id: {
+        type: Schema.Types.ObjectId,
+        ref: 'Restaurant',
+        required: true,
+        index: true,
+    },
     title: {
         type: String,
         required: [true, 'Expense title is required'],

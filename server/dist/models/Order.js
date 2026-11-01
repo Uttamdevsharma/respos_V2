@@ -22,6 +22,14 @@ const orderItemSchema = new Schema({
         type: String,
         trim: true,
     },
+    isAddon: {
+        type: Boolean,
+        default: false,
+    },
+    addonBatch: {
+        type: Number,
+        default: 0,
+    },
 }, { _id: false });
 const partialPaymentSchema = new Schema({
     amount: { type: Number, required: true, min: 0.01 },
@@ -30,6 +38,12 @@ const partialPaymentSchema = new Schema({
     paidAt: { type: Date, default: () => new Date() },
 }, { _id: false });
 const orderSchema = new Schema({
+    restaurant_id: {
+        type: Schema.Types.ObjectId,
+        ref: 'Restaurant',
+        required: true,
+        index: true,
+    },
     token: {
         type: String,
         required: true,
@@ -37,7 +51,8 @@ const orderSchema = new Schema({
     table: {
         type: Schema.Types.ObjectId,
         ref: 'Table',
-        required: [true, 'Table is required'],
+        required: false,
+        default: null,
     },
     waiter: {
         type: Schema.Types.ObjectId,
@@ -56,6 +71,11 @@ const orderSchema = new Schema({
         type: String,
         enum: ['pending', 'preparing', 'ready', 'served', 'billing', 'paid', 'completed', 'cancelled'],
         default: 'pending',
+    },
+    orderType: {
+        type: String,
+        enum: ['dine_in', 'takeaway', 'foodpanda', 'pathao', 'foodi', 'delivery'],
+        default: 'dine_in',
     },
     subtotal: {
         type: Number,
@@ -82,6 +102,10 @@ const orderSchema = new Schema({
     seatsOccupied: {
         type: Number,
         min: [0, 'Occupied seats cannot be negative'],
+        default: 0,
+    },
+    latestAddonBatch: {
+        type: Number,
         default: 0,
     },
     // Partial payment ledger

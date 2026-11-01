@@ -4,5 +4,8 @@ export declare class AuthController {
     static getMe: (req: Request, res: Response, next: import("express").NextFunction) => void;
     static logout: (req: Request, res: Response, next: import("express").NextFunction) => void;
     static refresh: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    static sendOtp: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    static verifyOtp: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    static registerRestaurant: (req: Request, res: Response, next: import("express").NextFunction) => void;
 }
 //# sourceMappingURL=auth.controller.d.ts.map

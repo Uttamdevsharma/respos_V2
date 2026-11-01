@@ -2,6 +2,7 @@ import { ApiError } from '../utils/ApiError.js';
 /**
  * Role-Based Access Control middleware.
  * Restricts route access to specified roles.
+ * Note: 'OWNER' is automatically authorized if 'admin' is in the allowed roles.
  */
 export const authorize = (...roles) => {
     return (req, _res, next) => {
@@ -9,8 +10,11 @@ export const authorize = (...roles) => {
             next(ApiError.unauthorized('Not authenticated'));
             return;
         }
-        if (!roles.includes(req.user.role)) {
-            next(ApiError.forbidden(`Role '${req.user.role}' is not authorized to access this resource`));
+        const userRole = req.user.role;
+        const isAllowed = roles.includes(userRole) ||
+            (roles.includes('admin') && userRole === 'OWNER');
+        if (!isAllowed) {
+            next(ApiError.forbidden(`Role '${userRole}' is not authorized to access this resource`));
             return;
         }
         next();

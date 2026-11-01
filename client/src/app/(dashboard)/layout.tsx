@@ -4,13 +4,30 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '../../store/auth.store';
 import Sidebar from '../../components/layout/sidebar';
-import { Menu, X, LogOut, LayoutDashboard, UtensilsCrossed, Monitor, ChefHat, ClipboardList, Receipt, BookOpen, Users, Settings as SettingsIcon, Wallet } from 'lucide-react';
+import {
+  Menu,
+  X,
+  LogOut,
+  LayoutDashboard,
+  UtensilsCrossed,
+  Monitor,
+  ChefHat,
+  ClipboardList,
+  Receipt,
+  BookOpen,
+  Users,
+  Settings as SettingsIcon,
+  Wallet,
+  CreditCard,
+  LifeBuoy,
+} from 'lucide-react';
 import Link from 'next/link';
 import { socket } from '../../lib/socket';
 import { useNotificationStore } from '../../store/notification.store';
 import { useBadgeStore } from '../../store/badge.store';
 import { playSound } from '../../lib/sound';
 import api from '../../lib/api';
+import { ThemeToggle } from '../../components/common/ThemeToggle';
 
 export default function DashboardLayout({
   children,
@@ -24,7 +41,7 @@ export default function DashboardLayout({
   const { kitchenCount, billingCount, ordersCount } = useBadgeStore();
   const [checking, setChecking] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [restaurantName, setRestaurantName] = useState('GastroFlow POS');
+  const [restaurantName, setRestaurantName] = useState(user?.restaurant?.name || 'Restaurant POS');
 
   useEffect(() => {
     loadFromStorage();
@@ -32,10 +49,14 @@ export default function DashboardLayout({
 
   // Load branding for mobile header / drawer
   useEffect(() => {
-    api.get('/settings').then(({ data }) => {
-      if (data.success) setRestaurantName(data.data.restaurantName || 'GastroFlow POS');
-    }).catch(() => {});
-  }, []);
+    if (user?.restaurant?.name) {
+      setRestaurantName(user.restaurant.name);
+    } else {
+      api.get('/settings').then(({ data }) => {
+        if (data.success) setRestaurantName(data.data.restaurantName || 'Restaurant POS');
+      }).catch(() => {});
+    }
+  }, [user]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -160,7 +181,6 @@ export default function DashboardLayout({
     );
   }
 
-  // Icons matching constants key
   const iconMap: Record<string, React.ElementType> = {
     LayoutDashboard,
     UtensilsCrossed,
@@ -171,20 +191,24 @@ export default function DashboardLayout({
     BookOpen,
     Users,
     Settings: SettingsIcon,
-    Wallet
+    Wallet,
+    CreditCard,
+    LifeBuoy,
   };
 
   const navItems = [
-    { label: 'Dashboard', href: '/dashboard', icon: 'LayoutDashboard', roles: ['admin'] },
-    { label: 'Tables', href: '/tables', icon: 'UtensilsCrossed', roles: ['admin', 'waiter'] },
-    { label: 'POS', href: '/pos', icon: 'Monitor', roles: ['admin', 'waiter'] },
-    { label: 'Kitchen', href: '/kitchen', icon: 'ChefHat', roles: ['admin', 'kitchen'] },
-    { label: 'Orders', href: '/orders', icon: 'ClipboardList', roles: ['admin', 'waiter', 'cashier'] },
-    { label: 'Billing', href: '/billing', icon: 'Receipt', roles: ['admin', 'cashier'] },
-    { label: 'Accounts', href: '/accounts', icon: 'Wallet', roles: ['admin'] },
-    { label: 'Menu', href: '/menu', icon: 'BookOpen', roles: ['admin', 'kitchen'] },
-    { label: 'Users', href: '/users', icon: 'Users', roles: ['admin'] },
-    { label: 'Settings', href: '/settings', icon: 'Settings', roles: ['admin'] },
+    { label: 'Dashboard', href: '/dashboard', icon: 'LayoutDashboard', roles: ['admin', 'OWNER'] },
+    { label: 'Tables', href: '/tables', icon: 'UtensilsCrossed', roles: ['admin', 'OWNER', 'waiter'] },
+    { label: 'POS', href: '/pos', icon: 'Monitor', roles: ['admin', 'OWNER', 'waiter'] },
+    { label: 'Kitchen', href: '/kitchen', icon: 'ChefHat', roles: ['admin', 'OWNER', 'kitchen'] },
+    { label: 'Orders', href: '/orders', icon: 'ClipboardList', roles: ['admin', 'OWNER', 'waiter', 'cashier'] },
+    { label: 'Billing', href: '/billing', icon: 'Receipt', roles: ['admin', 'OWNER', 'cashier'] },
+    { label: 'Accounts', href: '/accounts', icon: 'Wallet', roles: ['admin', 'OWNER'] },
+    { label: 'Menu', href: '/menu', icon: 'BookOpen', roles: ['admin', 'OWNER', 'kitchen'] },
+    { label: 'Users', href: '/users', icon: 'Users', roles: ['admin', 'OWNER'] },
+    { label: 'Subscription', href: '/subscription', icon: 'CreditCard', roles: ['admin', 'OWNER'] },
+    { label: 'Support Tickets', href: '/support-tickets', icon: 'LifeBuoy', roles: ['admin', 'OWNER'] },
+    { label: 'Settings', href: '/settings', icon: 'Settings', roles: ['admin', 'OWNER'] },
   ];
 
   const renderBadge = (label: string) => {
@@ -229,6 +253,7 @@ export default function DashboardLayout({
           <span className="text-base font-black text-primary-dark">{restaurantName}</span>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <span className="px-2.5 py-1 bg-surface-container text-on-surface text-[10px] font-black rounded-lg uppercase tracking-wider">
             {user?.role}
           </span>

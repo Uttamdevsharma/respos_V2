@@ -18,11 +18,19 @@ function safeDuration(raw, fallback, label) {
 }
 export const env = {
     PORT: parseInt(process.env.PORT || '5000', 10),
-    MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/gastroflow',
+    MONGO_URI: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/gastroflow',
     JWT_SECRET: process.env.JWT_SECRET || 'gastroflow_default_secret',
     JWT_EXPIRES_IN: safeDuration(process.env.JWT_EXPIRES_IN, '7d', 'JWT_EXPIRES_IN'),
     JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'gastroflow_refresh_secret',
     JWT_REFRESH_EXPIRES_IN: safeDuration(process.env.JWT_REFRESH_EXPIRES_IN, '30d', 'JWT_REFRESH_EXPIRES_IN'),
     NODE_ENV: process.env.NODE_ENV || 'development',
+    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
+    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
+    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
+    SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
+    SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),
+    SMTP_USER: process.env.SMTP_USER || '',
+    SMTP_PASS: process.env.SMTP_PASS || '',
+    SMTP_FROM: process.env.SMTP_FROM || 'noreply@restopos.com',
 };
 //# sourceMappingURL=env.js.map

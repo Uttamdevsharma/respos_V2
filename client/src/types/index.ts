@@ -1,5 +1,5 @@
 // === User ===
-export type UserRole = 'admin' | 'waiter' | 'cashier' | 'kitchen';
+export type UserRole = 'SUPER_ADMIN' | 'OWNER' | 'admin' | 'waiter' | 'cashier' | 'kitchen';
 
 export interface User {
   _id: string;
@@ -7,7 +7,96 @@ export interface User {
   email: string;
   role: UserRole;
   phone?: string;
+  restaurant_id?: string | null;
+  restaurant?: Restaurant | null;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// === Platform & SaaS Types ===
+export interface PlatformSettings {
+  project_name: string;
+  logo_url: string;
+  login_image_url?: string;
+  support_email: string;
+  support_phone: string;
+  currency: string;
+  currency_symbol: string;
+  manual_payment_active: boolean;
+  bkash_number: string;
+  bkash_type?: string;
+  nagad_number: string;
+  manual_payment_instruction: string;
+  bkash_merchant_active?: boolean;
+  bkash_app_key?: string;
+  bkash_app_secret?: string;
+  bkash_username?: string;
+  bkash_password?: string;
+  bkash_is_sandbox?: boolean;
+  nagad_merchant_active?: boolean;
+  nagad_merchant_id?: string;
+  nagad_public_key?: string;
+  nagad_private_key?: string;
+  nagad_is_sandbox?: boolean;
+  sslcommerz_active?: boolean;
+  sslcommerz_store_id?: string;
+  sslcommerz_store_passwd?: string;
+  sslcommerz_is_sandbox?: boolean;
+  eps_merchant_active?: boolean;
+  eps_merchant_id?: string;
+  eps_store_id?: string;
+  eps_app_key?: string;
+  eps_app_secret?: string;
+  eps_is_sandbox?: boolean;
+  youtube_url?: string;
+}
+
+export interface SubscriptionPlan {
+  _id: string;
+  name: string;
+  description: string;
+  badge?: string;
+  monthly_price: number;
+  annual_price: number;
+  trial_days: number;
+  is_trial_tier?: boolean;
+  is_custom_pricing?: boolean;
+  contact_phone?: string;
+  max_tables: number;
+  max_staff: number;
+  max_branches: number;
+  features: string[];
+  is_popular?: boolean;
+  is_active: boolean;
+}
+
+export type RestaurantStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+export type BillingCycle = 'MONTHLY' | 'ANNUAL';
+
+export interface Restaurant {
+  _id: string;
+  name: string;
+  owner_name: string;
+  email: string;
+  contact_number: string;
+  address: string;
+  status: RestaurantStatus;
+  plan_id: SubscriptionPlan | any;
+  billing_cycle: BillingCycle;
+  trade_license_number?: string;
+  trade_license_doc?: string;
+  nid_number?: string;
+  nid_front_doc?: string;
+  nid_back_doc?: string;
+  payment_method?: string;
+  payment_trx_id?: string;
+  payment_amount?: number;
+  payment_screenshot?: string;
+  sender_number?: string;
+  rejection_reason?: string;
+  subscription_start?: string;
+  subscription_end?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -208,3 +297,7 @@ export interface ApiResponse<T> {
   data: T;
   meta?: Record<string, unknown>;
 }
+
+
+// === Support & Live Chat ===
+export * from './support';

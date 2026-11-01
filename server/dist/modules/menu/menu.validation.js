@@ -21,6 +21,24 @@ export const createMenuItemSchema = z.object({
             return false;
         return val;
     }, z.boolean().optional()),
+    optionGroups: z.preprocess((val) => {
+        if (typeof val === 'string') {
+            try {
+                return JSON.parse(val);
+            }
+            catch {
+                return [];
+            }
+        }
+        return val;
+    }, z.array(z.object({
+        title: z.string().optional().default('Size'),
+        required: z.boolean().optional().default(true),
+        options: z.array(z.object({
+            name: z.string().min(1),
+            price: z.preprocess((v) => Number(v) || 0, z.number().min(0)),
+        })),
+    })).optional()),
 });
 export const updateMenuItemSchema = createMenuItemSchema.partial();
 //# sourceMappingURL=menu.validation.js.map

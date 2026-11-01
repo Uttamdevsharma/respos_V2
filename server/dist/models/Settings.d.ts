@@ -1,11 +1,17 @@
 import mongoose, { Document } from 'mongoose';
 export interface ISettings extends Document {
+    restaurant_id: mongoose.Types.ObjectId;
     restaurantName: string;
     address: string;
     phone: string;
     taxRate: number;
     serviceChargeRate: number;
     currency: string;
+    logo?: string;
+    loginImage?: string;
+    brandColor?: string;
+    tagline?: string;
+    description?: string;
     createdAt: Date;
     updatedAt: Date;
 }

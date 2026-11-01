@@ -8,25 +8,27 @@ import { useBadgeStore } from '../../store/badge.store';
 import api, { BASE_URL } from '../../lib/api';
 import {
   LayoutDashboard, UtensilsCrossed, Monitor, ChefHat, Receipt,
-  ClipboardList, BookOpen, Users, Settings, Plus, LogOut, Wallet
+  ClipboardList, BookOpen, Users, Settings, Plus, LogOut, Wallet, CreditCard, LifeBuoy
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ElementType> = {
   LayoutDashboard, UtensilsCrossed, Monitor, ChefHat, Receipt,
-  ClipboardList, BookOpen, Users, Settings, Wallet
+  ClipboardList, BookOpen, Users, Settings, Wallet, CreditCard, LifeBuoy
 };
 
 const navItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: 'LayoutDashboard', roles: ['admin'] },
-  { label: 'POS', href: '/pos', icon: 'Monitor', roles: ['admin', 'waiter'] },
-  { label: 'Kitchen', href: '/kitchen', icon: 'ChefHat', roles: ['admin', 'kitchen'] },
-  { label: 'Orders', href: '/orders', icon: 'ClipboardList', roles: ['admin', 'waiter', 'cashier'] },
-  { label: 'Billing', href: '/billing', icon: 'Receipt', roles: ['admin', 'cashier'] },
-  { label: 'Accounts', href: '/accounts', icon: 'Wallet', roles: ['admin'] },
-  { label: 'Menu', href: '/menu', icon: 'BookOpen', roles: ['admin', 'kitchen'] },
-  { label: 'Tables', href: '/tables', icon: 'UtensilsCrossed', roles: ['admin', 'waiter'] },
-  { label: 'Users', href: '/users', icon: 'Users', roles: ['admin'] },
-  { label: 'Settings', href: '/settings', icon: 'Settings', roles: ['admin'] },
+  { label: 'Dashboard', href: '/dashboard', icon: 'LayoutDashboard', roles: ['admin', 'OWNER'] },
+  { label: 'POS', href: '/pos', icon: 'Monitor', roles: ['admin', 'OWNER', 'waiter'] },
+  { label: 'Kitchen', href: '/kitchen', icon: 'ChefHat', roles: ['admin', 'OWNER', 'kitchen'] },
+  { label: 'Orders', href: '/orders', icon: 'ClipboardList', roles: ['admin', 'OWNER', 'waiter', 'cashier'] },
+  { label: 'Billing', href: '/billing', icon: 'Receipt', roles: ['admin', 'OWNER', 'cashier'] },
+  { label: 'Accounts', href: '/accounts', icon: 'Wallet', roles: ['admin', 'OWNER'] },
+  { label: 'Menu', href: '/menu', icon: 'BookOpen', roles: ['admin', 'OWNER', 'kitchen'] },
+  { label: 'Tables', href: '/tables', icon: 'UtensilsCrossed', roles: ['admin', 'OWNER', 'waiter'] },
+  { label: 'Users', href: '/users', icon: 'Users', roles: ['admin', 'OWNER'] },
+  { label: 'Subscription', href: '/subscription', icon: 'CreditCard', roles: ['admin', 'OWNER'] },
+  { label: 'Support Tickets', href: '/support-tickets', icon: 'LifeBuoy', roles: ['admin', 'OWNER'] },
+  { label: 'Settings', href: '/settings', icon: 'Settings', roles: ['admin', 'OWNER'] },
 ];
 
 function imgUrl(path?: string | null) {
@@ -40,17 +42,21 @@ export default function Sidebar() {
   const { user, logout } = useAuthStore();
   const { kitchenCount, billingCount, ordersCount } = useBadgeStore();
 
-  const [restaurantName, setRestaurantName] = useState('GastroFlow POS');
+  const [restaurantName, setRestaurantName] = useState(user?.restaurant?.name || 'Restaurant POS');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get('/settings').then(({ data }) => {
-      if (data.success) {
-        setRestaurantName(data.data.restaurantName || 'GastroFlow POS');
-        setLogoUrl(imgUrl(data.data.logo));
-      }
-    }).catch(() => {});
-  }, []);
+    if (user?.restaurant?.name) {
+      setRestaurantName(user.restaurant.name);
+    } else {
+      api.get('/settings').then(({ data }) => {
+        if (data.success) {
+          setRestaurantName(data.data.restaurantName || 'Restaurant POS');
+          setLogoUrl(imgUrl(data.data.logo));
+        }
+      }).catch(() => {});
+    }
+  }, [user]);
 
   const filteredNav = navItems.filter((item) =>
     user ? item.roles.includes(user.role) : false

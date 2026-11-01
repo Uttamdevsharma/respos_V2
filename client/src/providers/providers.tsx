@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { BrandProvider } from './BrandProvider';
+import { ThemeProvider } from './ThemeProvider';
+import { PlatformProvider } from './PlatformProvider';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -19,29 +21,32 @@ export function Providers({ children }: { children: ReactNode }) {
       })
   );
 
-  // No centralized session-expired handling; per-page handlers manage 401 UI and redirect.
-
   return (
     <QueryClientProvider client={queryClient}>
-      <BrandProvider>
-        {children}
-      </BrandProvider>
+      <ThemeProvider>
+        <PlatformProvider>
+          <BrandProvider>
+            {children}
+          </BrandProvider>
+        </PlatformProvider>
+      </ThemeProvider>
       <Toaster
         position="top-right"
         toastOptions={{
           duration: 3000,
           style: {
-            background: '#251913',
+            background: '#0f172a',
             color: '#fff',
-            borderRadius: '12px',
+            borderRadius: '0px',
             fontSize: '14px',
             fontWeight: '500',
+            border: '1px solid #334155',
           },
           success: {
-            iconTheme: { primary: '#00b251', secondary: '#fff' },
+            iconTheme: { primary: '#10b981', secondary: '#fff' },
           },
           error: {
-            iconTheme: { primary: '#ba1a1a', secondary: '#fff' },
+            iconTheme: { primary: '#ef4444', secondary: '#fff' },
           },
         }}
       />

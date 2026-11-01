@@ -12,6 +12,7 @@ export interface IMenuItemOptionGroup {
 }
 
 export interface IMenuItem extends Document {
+  restaurant_id: mongoose.Types.ObjectId;
   name: string;
   description?: string;
   price: number;
@@ -36,6 +37,12 @@ const menuItemOptionGroupSchema = new Schema<IMenuItemOptionGroup>({
 
 const menuItemSchema = new Schema<IMenuItem>(
   {
+    restaurant_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Restaurant',
+      required: true,
+      index: true,
+    },
     name: {
       type: String,
       required: [true, 'Menu item name is required'],

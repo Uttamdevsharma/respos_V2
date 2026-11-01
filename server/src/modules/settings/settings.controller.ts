@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -6,36 +6,40 @@ import { ApiResponse } from '../../utils/ApiResponse.js';
 import { catchAsync } from '../../utils/catchAsync.js';
 import Settings from '../../models/Settings.js';
 import { uploadBufferToCloudinary, deleteFromCloudinary } from '../../config/cloudinary.js';
+import { AuthRequest } from '../../middleware/auth.js';
+import { ApiError } from '../../utils/ApiError.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/** Delete a stored file from uploads folder safely */
 function deleteFile(filePath: string | null | undefined) {
   if (!filePath) return;
   try {
-    // filePath is like "/uploads/123-456.jpg" – strip leading slash
     const relative = filePath.startsWith('/') ? filePath.slice(1) : filePath;
     const absolute = path.join(__dirname, '..', '..', '..', relative);
     if (fs.existsSync(absolute)) fs.unlinkSync(absolute);
   } catch (_) {
-    // ignore unlink errors
+    // ignore
   }
 }
 
 export class SettingsController {
-  static get = catchAsync(async (_req: Request, res: Response) => {
-    let settings = await Settings.findOne();
+  static get = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    let settings = await Settings.findOne({ restaurant_id: restaurantId });
     if (!settings) {
-      settings = await Settings.create({});
+      settings = await Settings.create({ restaurant_id: restaurantId });
     }
     ApiResponse.success(res, settings);
   });
 
-  static update = catchAsync(async (req: Request, res: Response) => {
-    let settings = await Settings.findOne();
+  static update = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    let settings = await Settings.findOne({ restaurant_id: restaurantId });
     if (!settings) {
-      settings = await Settings.create(req.body);
+      settings = await Settings.create({ ...req.body, restaurant_id: restaurantId });
     } else {
       Object.assign(settings, req.body);
       await settings.save();
@@ -44,10 +48,12 @@ export class SettingsController {
   });
 
   /** Handle logo and loginImage uploads (multipart/form-data) */
-  static uploadImages = catchAsync(async (req: Request, res: Response) => {
-    let settings = await Settings.findOne();
+  static uploadImages = catchAsync(async (req: AuthRequest, res: Response) => {
+    const restaurantId = req.user?.restaurant_id;
+    if (!restaurantId) throw ApiError.forbidden('Restaurant context missing');
+    let settings = await Settings.findOne({ restaurant_id: restaurantId });
     if (!settings) {
-      settings = await Settings.create({});
+      settings = await Settings.create({ restaurant_id: restaurantId });
     }
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;

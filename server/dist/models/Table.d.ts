@@ -1,5 +1,6 @@
 import mongoose, { Document } from 'mongoose';
 export interface ITable extends Document {
+    restaurant_id: mongoose.Types.ObjectId;
     number: number;
     capacity: number;
     status: 'available' | 'occupied' | 'reserved';

@@ -6,41 +6,43 @@ import { generateOrderToken } from '../../utils/tokenGenerator.js';
 import { CreateOrderInput, ProcessPaymentInput, PartialPaymentInput, SplitPaymentInput, AddItemsInput, CancelItemInput } from './order.validation.js';
 import { emitOrderEvent } from '../../config/socket.js';
 
-
 export class OrderService {
-  static async getAll(filters: Record<string, unknown> = {}): Promise<IOrder[]> {
-    return Order.find(filters)
+  static async getAll(restaurantId: string, filters: Record<string, unknown> = {}): Promise<IOrder[]> {
+    return Order.find({ ...filters, restaurant_id: restaurantId })
       .populate('table', 'number capacity location')
       .populate('waiter', 'name')
       .sort({ createdAt: -1 });
   }
 
-  static async getById(id: string): Promise<IOrder> {
-    const order = await Order.findById(id)
+  static async getById(id: string, restaurantId?: string): Promise<IOrder> {
+    const query: any = { _id: id };
+    if (restaurantId) query.restaurant_id = restaurantId;
+
+    const order = await Order.findOne(query)
       .populate('table', 'number capacity location')
       .populate('waiter', 'name');
     if (!order) throw ApiError.notFound('Order not found');
     return order;
   }
 
-  static async create(input: CreateOrderInput, waiterId: string): Promise<IOrder> {
+  static async create(input: CreateOrderInput, waiterId: string, restaurantId: string): Promise<IOrder> {
     let table = null;
     if (input.table) {
-      table = await Table.findById(input.table);
+      table = await Table.findOne({ _id: input.table, restaurant_id: restaurantId });
     }
 
     // Get settings for tax/service rates
-    let settings = await Settings.findOne();
+    let settings = await Settings.findOne({ restaurant_id: restaurantId });
     if (!settings) {
-      settings = await Settings.create({});
+      settings = await Settings.create({ restaurant_id: restaurantId });
     }
 
     // Calculate totals
     const discount = input.discount || 0;
     const subtotal = input.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const taxableAmount = Math.max(0, subtotal - discount);
-    const taxRate = settings.taxRate / 100;
-    const serviceRate = settings.serviceChargeRate / 100;
+    const taxRate = (settings.taxRate || 0) / 100;
+    const serviceRate = (settings.serviceChargeRate || 0) / 100;
     const tax = Math.round(taxableAmount * taxRate * 100) / 100;
     const serviceCharge = Math.round(taxableAmount * serviceRate * 100) / 100;
     const grandTotal = Math.round((taxableAmount + tax + serviceCharge) * 100) / 100;
@@ -55,6 +57,7 @@ export class OrderService {
     const returnAmount = isPayFirst ? Math.max(0, effectivePaid - grandTotal) : 0;
 
     const orderData: any = {
+      restaurant_id: restaurantId,
       token,
       table: input.table || null,
       waiter: waiterId,
@@ -95,19 +98,19 @@ export class OrderService {
   }
 
   /** Append new items to an existing active order and recalculate totals */
-  static async addItems(id: string, input: AddItemsInput): Promise<IOrder> {
-    const order = await Order.findById(id);
+  static async addItems(id: string, input: AddItemsInput, restaurantId?: string): Promise<IOrder> {
+    const query: any = { _id: id };
+    if (restaurantId) query.restaurant_id = restaurantId;
+    const order = await Order.findOne(query);
     if (!order) throw ApiError.notFound('Order not found');
 
     if (order.status === 'cancelled') {
       throw ApiError.badRequest('Cannot add items to a cancelled order');
     }
 
-    // Increment latestAddonBatch number for kitchen filtering
     const nextBatch = ((order as any).latestAddonBatch || 0) + 1;
     (order as any).latestAddonBatch = nextBatch;
 
-    // Append add-on items tagged with isAddon: true and current addonBatch
     for (const newItem of input.items) {
       const existingInBatch = (order.items as any[]).find(
         (i: any) => i.isAddon && i.addonBatch === nextBatch && i.menuItem?.toString() === newItem.menuItem && i.name === newItem.name && (i.notes || '') === (newItem.notes || '')
@@ -124,11 +127,10 @@ export class OrderService {
       }
     }
 
-    // Recalculate totals
-    let settings = await Settings.findOne();
-    if (!settings) settings = await Settings.create({});
-    const taxRate = settings.taxRate / 100;
-    const serviceRate = settings.serviceChargeRate / 100;
+    let settings = await Settings.findOne({ restaurant_id: order.restaurant_id });
+    if (!settings) settings = await Settings.create({ restaurant_id: order.restaurant_id });
+    const taxRate = (settings.taxRate || 0) / 100;
+    const serviceRate = (settings.serviceChargeRate || 0) / 100;
     const subtotal = (order.items as any[]).reduce((sum: number, i: any) => sum + i.price * i.quantity, 0);
     const tax = Math.round(subtotal * taxRate * 100) / 100;
     const serviceCharge = Math.round(subtotal * serviceRate * 100) / 100;
@@ -138,7 +140,6 @@ export class OrderService {
     order.grandTotal = subtotal + tax + serviceCharge;
     order.amountDue = Math.max(0, Math.round((order.grandTotal - (order.amountPaid || 0)) * 100) / 100);
 
-    // Reactivate order to preparing for kitchen notification if add-ons added
     if (['completed', 'paid', 'ready', 'served', 'billing'].includes(order.status)) {
       order.status = 'preparing';
     }
@@ -153,8 +154,10 @@ export class OrderService {
   }
 
   /** Cancel (remove or reduce qty of) a specific item in an order */
-  static async cancelItem(id: string, input: CancelItemInput): Promise<IOrder> {
-    const order = await Order.findById(id);
+  static async cancelItem(id: string, input: CancelItemInput, restaurantId?: string): Promise<IOrder> {
+    const query: any = { _id: id };
+    if (restaurantId) query.restaurant_id = restaurantId;
+    const order = await Order.findOne(query);
     if (!order) throw ApiError.notFound('Order not found');
 
     if (order.status === 'cancelled') {
@@ -167,25 +170,22 @@ export class OrderService {
     }
 
     const item = items[input.itemIndex];
-    const cancelQty = input.cancelQuantity ?? item.quantity; // cancel all if not specified
+    const cancelQty = input.cancelQuantity ?? item.quantity;
 
     if (cancelQty >= item.quantity) {
-      // Remove the item entirely
       items.splice(input.itemIndex, 1);
     } else {
       item.quantity -= cancelQty;
     }
 
     if (items.length === 0) {
-      // If no items left, cancel the whole order
       order.status = 'cancelled';
     }
 
-    // Recalculate totals
-    let settings = await Settings.findOne();
-    if (!settings) settings = await Settings.create({});
-    const taxRate = settings.taxRate / 100;
-    const serviceRate = settings.serviceChargeRate / 100;
+    let settings = await Settings.findOne({ restaurant_id: order.restaurant_id });
+    if (!settings) settings = await Settings.create({ restaurant_id: order.restaurant_id });
+    const taxRate = (settings.taxRate || 0) / 100;
+    const serviceRate = (settings.serviceChargeRate || 0) / 100;
     const subtotal = items.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0);
     const tax = Math.round(subtotal * taxRate * 100) / 100;
     const serviceCharge = Math.round(subtotal * serviceRate * 100) / 100;
@@ -210,11 +210,12 @@ export class OrderService {
     return populated;
   }
 
-  static async updateStatus(id: string, status: OrderStatus): Promise<IOrder> {
-    const order = await Order.findById(id);
+  static async updateStatus(id: string, status: OrderStatus, restaurantId?: string): Promise<IOrder> {
+    const query: any = { _id: id };
+    if (restaurantId) query.restaurant_id = restaurantId;
+    const order = await Order.findOne(query);
     if (!order) throw ApiError.notFound('Order not found');
 
-    // Validate status transitions
     const validTransitions: Record<string, string[]> = {
       pending: ['preparing', 'cancelled'],
       preparing: ['ready', 'cancelled'],
@@ -232,7 +233,6 @@ export class OrderService {
     order.status = status;
     await order.save();
 
-    // If completed or cancelled, update table occupancy status
     if (status === 'completed' || status === 'cancelled') {
       await OrderService.updateTableOccupancyStatus(order.table);
     }
@@ -244,9 +244,10 @@ export class OrderService {
     return populated;
   }
 
-  static async getKitchenOrders(): Promise<IOrder[]> {
+  static async getKitchenOrders(restaurantId: string): Promise<IOrder[]> {
     try {
       const orders = await Order.find({
+        restaurant_id: restaurantId,
         status: { $in: ['pending', 'preparing', 'ready'] },
       })
         .populate('table', 'number capacity location')
@@ -259,9 +260,10 @@ export class OrderService {
     }
   }
 
-  static async getBillingOrders(): Promise<IOrder[]> {
+  static async getBillingOrders(restaurantId: string): Promise<IOrder[]> {
     try {
       const orders = await Order.find({
+        restaurant_id: restaurantId,
         status: { $in: ['served', 'billing'] },
         paymentMode: { $ne: 'pay_first' },
       })
@@ -275,19 +277,20 @@ export class OrderService {
     }
   }
 
-  static async addPartialPayment(id: string, input: PartialPaymentInput): Promise<IOrder> {
-    const order = await Order.findById(id);
+  static async addPartialPayment(id: string, input: PartialPaymentInput, restaurantId?: string): Promise<IOrder> {
+    const query: any = { _id: id };
+    if (restaurantId) query.restaurant_id = restaurantId;
+    const order = await Order.findOne(query);
     if (!order) throw ApiError.notFound('Order not found');
 
     if (!['served', 'billing'].includes(order.status)) {
       throw ApiError.badRequest('Order must be in served or billing status to accept partial payments');
     }
 
-    // Recalculate grand total with current discount
-    let settings = await Settings.findOne();
-    if (!settings) settings = await Settings.create({});
-    const taxRate = settings.taxRate / 100;
-    const serviceRate = settings.serviceChargeRate / 100;
+    let settings = await Settings.findOne({ restaurant_id: order.restaurant_id });
+    if (!settings) settings = await Settings.create({ restaurant_id: order.restaurant_id });
+    const taxRate = (settings.taxRate || 0) / 100;
+    const serviceRate = (settings.serviceChargeRate || 0) / 100;
     const taxableAmount = order.subtotal - (order.discount || 0);
     const grandTotal = Math.round((taxableAmount * (1 + taxRate + serviceRate)) * 100) / 100;
 
@@ -312,7 +315,6 @@ export class OrderService {
     order.amountDue = Math.max(0, Math.round((grandTotal - newAmountPaid) * 100) / 100);
     order.grandTotal = grandTotal;
 
-    // Move to billing status if not already there
     if (order.status === 'served') {
       order.status = 'billing';
     }
@@ -326,26 +328,26 @@ export class OrderService {
     return populated;
   }
 
-  static async processPayment(id: string, input: ProcessPaymentInput): Promise<IOrder> {
-    const order = await Order.findById(id);
+  static async processPayment(id: string, input: ProcessPaymentInput, restaurantId?: string): Promise<IOrder> {
+    const query: any = { _id: id };
+    if (restaurantId) query.restaurant_id = restaurantId;
+    const order = await Order.findOne(query);
     if (!order) throw ApiError.notFound('Order not found');
 
     if (order.status !== 'served' && order.status !== 'billing') {
       throw ApiError.badRequest('Order must be served or in billing status to process payment');
     }
 
-    // Recalculate with discount
-    let settings = await Settings.findOne();
-    if (!settings) settings = await Settings.create({});
+    let settings = await Settings.findOne({ restaurant_id: order.restaurant_id });
+    if (!settings) settings = await Settings.create({ restaurant_id: order.restaurant_id });
 
-    const taxRate = settings.taxRate / 100;
-    const serviceRate = settings.serviceChargeRate / 100;
+    const taxRate = (settings.taxRate || 0) / 100;
+    const serviceRate = (settings.serviceChargeRate || 0) / 100;
     const taxableAmount = order.subtotal - input.discount;
     const tax = Math.round(taxableAmount * taxRate * 100) / 100;
     const serviceCharge = Math.round(taxableAmount * serviceRate * 100) / 100;
     const grandTotal = Math.round((taxableAmount + tax + serviceCharge) * 100) / 100;
 
-    // Subtract already-collected partial payments
     const alreadyPaid = order.amountPaid || 0;
     const remainingDue = Math.max(0, Math.round((grandTotal - alreadyPaid) * 100) / 100);
 
@@ -366,7 +368,6 @@ export class OrderService {
 
     await order.save();
 
-    // Auto-complete and free table
     order.status = 'completed';
     await order.save();
 
@@ -380,29 +381,29 @@ export class OrderService {
     return populated;
   }
 
-  static async processSplitPayment(id: string, input: SplitPaymentInput): Promise<IOrder> {
-    const order = await Order.findById(id);
+  static async processSplitPayment(id: string, input: SplitPaymentInput, restaurantId?: string): Promise<IOrder> {
+    const query: any = { _id: id };
+    if (restaurantId) query.restaurant_id = restaurantId;
+    const order = await Order.findOne(query);
     if (!order) throw ApiError.notFound('Order not found');
 
     if (!['served', 'billing'].includes(order.status)) {
       throw ApiError.badRequest('Order must be served or in billing status to process split payment');
     }
 
-    let settings = await Settings.findOne();
-    if (!settings) settings = await Settings.create({});
+    let settings = await Settings.findOne({ restaurant_id: order.restaurant_id });
+    if (!settings) settings = await Settings.create({ restaurant_id: order.restaurant_id });
 
-    const taxRate = settings.taxRate / 100;
-    const serviceRate = settings.serviceChargeRate / 100;
+    const taxRate = (settings.taxRate || 0) / 100;
+    const serviceRate = (settings.serviceChargeRate || 0) / 100;
     const taxableAmount = order.subtotal - input.discount;
     const tax = Math.round(taxableAmount * taxRate * 100) / 100;
     const serviceCharge = Math.round(taxableAmount * serviceRate * 100) / 100;
     const grandTotal = Math.round((taxableAmount + tax + serviceCharge) * 100) / 100;
 
-    // Already collected via partial payments
     const alreadyPaid = order.amountPaid || 0;
     const remainingDue = Math.max(0, Math.round((grandTotal - alreadyPaid) * 100) / 100);
 
-    // Validate: splits total must cover the remaining due
     const splitsTotal = Math.round(input.splits.reduce((sum, s) => sum + s.amount, 0) * 100) / 100;
     if (splitsTotal < remainingDue - 0.01) {
       throw ApiError.badRequest(
@@ -412,7 +413,6 @@ export class OrderService {
 
     const returnAmount = Math.max(0, Math.round((splitsTotal + alreadyPaid - grandTotal) * 100) / 100);
 
-    // Persist split entries
     order.splitPayments = input.splits.map((s) => ({
       paymentMethod: s.paymentMethod,
       amount: s.amount,
@@ -423,7 +423,6 @@ export class OrderService {
     order.tax = tax;
     order.serviceCharge = serviceCharge;
     order.grandTotal = grandTotal;
-    // Primary method = whichever split has the largest amount
     const primary = input.splits.reduce((a, b) => (a.amount >= b.amount ? a : b));
     order.paymentMethod = primary.paymentMethod;
     order.paidAmount = splitsTotal;
@@ -448,8 +447,9 @@ export class OrderService {
     return populated;
   }
 
-  static async getWaiterOrders(waiterId: string): Promise<IOrder[]> {
+  static async getWaiterOrders(waiterId: string, restaurantId: string): Promise<IOrder[]> {
     return Order.find({
+      restaurant_id: restaurantId,
       waiter: waiterId,
       status: { $in: ['pending', 'preparing', 'ready', 'served'] },
     })
@@ -479,12 +479,14 @@ export class OrderService {
     }
   }
 
-  static async deleteOrder(id: string): Promise<IOrder> {
-    const order = await Order.findById(id);
+  static async deleteOrder(id: string, restaurantId?: string): Promise<IOrder> {
+    const query: any = { _id: id };
+    if (restaurantId) query.restaurant_id = restaurantId;
+    const order = await Order.findOne(query);
     if (!order) throw ApiError.notFound('Order not found');
 
     const tableId = order.table;
-    await Order.findByIdAndDelete(id);
+    await Order.findByIdAndDelete(order._id);
 
     if (tableId) {
       await OrderService.updateTableOccupancyStatus(tableId);
@@ -494,12 +496,15 @@ export class OrderService {
     return order;
   }
 
-  static async bulkDeleteOrders(orderIds: string[]): Promise<{ count: number }> {
-    const orders = await Order.find({ _id: { $in: orderIds } });
+  static async bulkDeleteOrders(orderIds: string[], restaurantId?: string): Promise<{ count: number }> {
+    const query: any = { _id: { $in: orderIds } };
+    if (restaurantId) query.restaurant_id = restaurantId;
+    const orders = await Order.find(query);
     if (orders.length === 0) return { count: 0 };
 
+    const validIds = orders.map((o) => o._id);
     const tableIds = Array.from(new Set(orders.map((o) => o.table).filter(Boolean)));
-    await Order.deleteMany({ _id: { $in: orderIds } });
+    await Order.deleteMany({ _id: { $in: validIds } });
 
     for (const tableId of tableIds) {
       await OrderService.updateTableOccupancyStatus(tableId);

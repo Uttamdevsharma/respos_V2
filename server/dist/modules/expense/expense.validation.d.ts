@@ -7,14 +7,14 @@ export declare const createExpenseSchema: z.ZodObject<{
     note: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     amount: number;
-    category: string;
     title: string;
+    category: string;
     date?: string | Date | undefined;
     note?: string | undefined;
 }, {
     amount: number;
-    category: string;
     title: string;
+    category: string;
     date?: string | Date | undefined;
     note?: string | undefined;
 }>;

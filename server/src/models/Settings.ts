@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ISettings extends Document {
+  restaurant_id: mongoose.Types.ObjectId;
   restaurantName: string;
   address: string;
   phone: string;
@@ -18,6 +19,13 @@ export interface ISettings extends Document {
 
 const settingsSchema = new Schema<ISettings>(
   {
+    restaurant_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Restaurant',
+      required: true,
+      index: true,
+      unique: true,
+    },
     restaurantName: {
       type: String,
       default: 'GastroFlow Restaurant',

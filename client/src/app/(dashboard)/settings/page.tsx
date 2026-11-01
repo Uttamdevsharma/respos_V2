@@ -163,8 +163,7 @@ export default function SettingsPage() {
   const [description, setDescription]  = useState('');
 
   // Image uploading state
-  const [uploadingLogo, setUploadingLogo]             = useState(false);
-  const [uploadingLoginImage, setUploadingLoginImage] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const fetchSettings = async () => {
     try {
@@ -219,40 +218,37 @@ export default function SettingsPage() {
   };
 
   // ── Image upload / delete helpers ────────────────────────────────────────
-  const uploadImage = async (field: 'logo' | 'loginImage', file: File) => {
-    const setter = field === 'logo' ? setUploadingLogo : setUploadingLoginImage;
-    setter(true);
+  const uploadImage = async (field: 'logo', file: File) => {
+    setUploadingLogo(true);
     try {
       const formData = new FormData();
-      formData.append(field, file);
+      formData.append('logo', file);
       const { data } = await api.post('/settings/upload-images', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       if (data.success) {
         setSettings(data.data);
-        toast.success(`${field === 'logo' ? 'Logo' : 'Login image'} updated`);
+        toast.success('Restaurant logo updated');
       }
     } catch {
       toast.error('Image upload failed');
     } finally {
-      setter(false);
+      setUploadingLogo(false);
     }
   };
 
-  const deleteImage = async (field: 'logo' | 'loginImage') => {
-    const setter = field === 'logo' ? setUploadingLogo : setUploadingLoginImage;
-    setter(true);
+  const deleteImage = async (field: 'logo') => {
+    setUploadingLogo(true);
     try {
-      const body = field === 'logo' ? { deleteLogo: 'true' } : { deleteLoginImage: 'true' };
-      const { data } = await api.post('/settings/upload-images', body);
+      const { data } = await api.post('/settings/upload-images', { deleteLogo: 'true' });
       if (data.success) {
         setSettings(data.data);
-        toast.success(`${field === 'logo' ? 'Logo' : 'Login image'} removed`);
+        toast.success('Restaurant logo removed');
       }
     } catch {
       toast.error('Failed to remove image');
     } finally {
-      setter(false);
+      setUploadingLogo(false);
     }
   };
 
@@ -292,34 +288,23 @@ export default function SettingsPage() {
           </div>
         ) : (
           <>
-            {/* ── Branding Images ────────────────────────────────────────── */}
+            {/* ── Restaurant Brand Logo ────────────────────────────────────────── */}
             <div className="bg-surface rounded-2xl border border-outline-variant/50 shadow-sm p-6 space-y-6">
               <h4 className="text-xs font-black text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
                 <ImageIcon size={14} className="text-primary" />
-                Branding &amp; Appearance
+                Restaurant Branding
               </h4>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="max-w-md">
                 {/* Logo */}
                 <BrandingImageCard
                   label="Restaurant Logo"
-                  description="Circular logo shown on login screen and sidebar header."
+                  description="Logo printed on customer receipts and shown on your branch dashboard header."
                   icon={Store}
                   currentUrl={imgUrl(settings?.logo)}
                   uploading={uploadingLogo}
                   onUpload={(file) => uploadImage('logo', file)}
                   onDelete={() => deleteImage('logo')}
-                />
-
-                {/* Login page image */}
-                <BrandingImageCard
-                  label="Login Page Image"
-                  description="Full background image on the left panel of the login page."
-                  icon={LayoutTemplate}
-                  currentUrl={imgUrl(settings?.loginImage)}
-                  uploading={uploadingLoginImage}
-                  onUpload={(file) => uploadImage('loginImage', file)}
-                  onDelete={() => deleteImage('loginImage')}
                 />
               </div>
             </div>

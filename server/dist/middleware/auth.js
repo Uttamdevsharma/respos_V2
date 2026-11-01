@@ -24,6 +24,7 @@ export const protect = async (req, _res, next) => {
             name: user.name,
             email: user.email,
             role: user.role,
+            restaurant_id: user.restaurant_id ? user.restaurant_id.toString() : null,
         };
         next();
     }

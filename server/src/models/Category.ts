@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICategory extends Document {
+  restaurant_id: mongoose.Types.ObjectId;
   name: string;
   description?: string;
   sortOrder: number;
@@ -11,10 +12,15 @@ export interface ICategory extends Document {
 
 const categorySchema = new Schema<ICategory>(
   {
+    restaurant_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Restaurant',
+      required: true,
+      index: true,
+    },
     name: {
       type: String,
       required: [true, 'Category name is required'],
-      unique: true,
       trim: true,
     },
     description: {
@@ -34,6 +40,8 @@ const categorySchema = new Schema<ICategory>(
     timestamps: true,
   }
 );
+
+categorySchema.index({ restaurant_id: 1, name: 1 }, { unique: true });
 
 const Category = mongoose.model<ICategory>('Category', categorySchema);
 export default Category;

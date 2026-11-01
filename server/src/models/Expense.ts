@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IExpense extends Document {
+  restaurant_id: mongoose.Types.ObjectId;
   title: string;
   amount: number;
   category: string;
@@ -12,6 +13,12 @@ export interface IExpense extends Document {
 
 const expenseSchema = new Schema<IExpense>(
   {
+    restaurant_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Restaurant',
+      required: true,
+      index: true,
+    },
     title: {
       type: String,
       required: [true, 'Expense title is required'],

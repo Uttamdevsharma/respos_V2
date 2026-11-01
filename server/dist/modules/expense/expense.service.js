@@ -2,11 +2,11 @@ import Expense from '../../models/Expense.js';
 import Order from '../../models/Order.js';
 import { ApiError } from '../../utils/ApiError.js';
 export class ExpenseService {
-    static async create(input) {
-        return Expense.create(input);
+    static async create(input, restaurantId) {
+        return Expense.create({ ...input, restaurant_id: restaurantId });
     }
-    static async getAll(filters) {
-        const query = {};
+    static async getAll(restaurantId, filters) {
+        const query = { restaurant_id: restaurantId };
         if (filters.startDate || filters.endDate) {
             query.date = {};
             if (filters.startDate) {
@@ -23,28 +23,29 @@ export class ExpenseService {
         }
         return Expense.find(query).sort({ date: -1, createdAt: -1 });
     }
-    static async delete(id) {
-        const expense = await Expense.findById(id);
+    static async delete(id, restaurantId) {
+        const expense = await Expense.findOne({ _id: id, restaurant_id: restaurantId });
         if (!expense)
             throw ApiError.notFound('Expense not found');
-        await Expense.findByIdAndDelete(id);
+        await Expense.findOneAndDelete({ _id: id, restaurant_id: restaurantId });
     }
-    static async getAccountsSummary(startDateStr, endDateStr) {
+    static async getAccountsSummary(restaurantId, startDateStr, endDateStr) {
         const start = new Date(startDateStr);
         const end = new Date(endDateStr);
         end.setHours(23, 59, 59, 999);
         const orders = await Order.find({
+            restaurant_id: restaurantId,
             status: 'completed',
             createdAt: { $gte: start, $lte: end }
         });
         const totalRevenue = orders.reduce((sum, order) => sum + (order.grandTotal || 0), 0);
         const expenses = await Expense.find({
+            restaurant_id: restaurantId,
             date: { $gte: start, $lte: end }
         });
         const totalExpense = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
         const netProfit = totalRevenue - totalExpense;
         const breakdown = [];
-        // Limit breakdown generating to prevent too many loops if interval is huge
         const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
         if (daysDiff <= 31) {
             let current = new Date(start);
@@ -64,7 +65,6 @@ export class ExpenseService {
             }
         }
         else {
-            // Group by month instead of day if date range is longer than a month
             const monthsMap = {};
             orders.forEach(o => {
                 const monthStr = o.createdAt.toISOString().substring(0, 7); // YYYY-MM

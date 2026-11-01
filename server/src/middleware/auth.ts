@@ -2,14 +2,15 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { ApiError } from '../utils/ApiError.js';
-import User from '../models/User.js';
+import User, { UserRole } from '../models/User.js';
 
 export interface AuthRequest extends Request {
   user?: {
     _id: string;
     name: string;
     email: string;
-    role: 'admin' | 'waiter' | 'cashier' | 'kitchen';
+    role: UserRole;
+    restaurant_id?: string | null;
   };
 }
 
@@ -45,6 +46,7 @@ export const protect = async (
       name: user.name,
       email: user.email,
       role: user.role,
+      restaurant_id: user.restaurant_id ? user.restaurant_id.toString() : null,
     };
 
     next();

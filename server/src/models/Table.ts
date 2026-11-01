@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ITable extends Document {
+  restaurant_id: mongoose.Types.ObjectId;
   number: number;
   capacity: number;
   status: 'available' | 'occupied' | 'reserved';
@@ -14,10 +15,15 @@ export interface ITable extends Document {
 
 const tableSchema = new Schema<ITable>(
   {
+    restaurant_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Restaurant',
+      required: true,
+      index: true,
+    },
     number: {
       type: Number,
       required: [true, 'Table number is required'],
-      unique: true,
     },
     capacity: {
       type: Number,
@@ -45,6 +51,8 @@ const tableSchema = new Schema<ITable>(
     timestamps: true,
   }
 );
+
+tableSchema.index({ restaurant_id: 1, number: 1 }, { unique: true });
 
 const Table = mongoose.model<ITable>('Table', tableSchema);
 export default Table;

@@ -1,9 +1,14 @@
 import mongoose, { Schema } from 'mongoose';
 const categorySchema = new Schema({
+    restaurant_id: {
+        type: Schema.Types.ObjectId,
+        ref: 'Restaurant',
+        required: true,
+        index: true,
+    },
     name: {
         type: String,
         required: [true, 'Category name is required'],
-        unique: true,
         trim: true,
     },
     description: {
@@ -21,6 +26,7 @@ const categorySchema = new Schema({
 }, {
     timestamps: true,
 });
+categorySchema.index({ restaurant_id: 1, name: 1 }, { unique: true });
 const Category = mongoose.model('Category', categorySchema);
 export default Category;
 //# sourceMappingURL=Category.js.map

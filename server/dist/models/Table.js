@@ -1,9 +1,14 @@
 import mongoose, { Schema } from 'mongoose';
 const tableSchema = new Schema({
+    restaurant_id: {
+        type: Schema.Types.ObjectId,
+        ref: 'Restaurant',
+        required: true,
+        index: true,
+    },
     number: {
         type: Number,
         required: [true, 'Table number is required'],
-        unique: true,
     },
     capacity: {
         type: Number,
@@ -29,6 +34,7 @@ const tableSchema = new Schema({
 }, {
     timestamps: true,
 });
+tableSchema.index({ restaurant_id: 1, number: 1 }, { unique: true });
 const Table = mongoose.model('Table', tableSchema);
 export default Table;
 //# sourceMappingURL=Table.js.map

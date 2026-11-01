@@ -22,8 +22,14 @@ const userSchema = new Schema({
     },
     role: {
         type: String,
-        enum: ['admin', 'waiter', 'cashier', 'kitchen'],
+        enum: ['SUPER_ADMIN', 'OWNER', 'admin', 'waiter', 'cashier', 'kitchen'],
         default: 'waiter',
+    },
+    restaurant_id: {
+        type: Schema.Types.ObjectId,
+        ref: 'Restaurant',
+        default: null,
+        index: true,
     },
     phone: {
         type: String,

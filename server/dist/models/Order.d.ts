@@ -5,6 +5,8 @@ export interface IOrderItem {
     price: number;
     quantity: number;
     notes?: string;
+    isAddon?: boolean;
+    addonBatch?: number;
 }
 export interface IPartialPayment {
     amount: number;
@@ -19,18 +21,22 @@ export interface ISplitPaymentEntry {
 }
 export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'served' | 'billing' | 'paid' | 'completed' | 'cancelled';
 export type PaymentMethod = 'cash' | 'card' | 'mobile';
+export type OrderType = 'dine_in' | 'takeaway' | 'foodpanda' | 'pathao' | 'foodi' | 'delivery';
 export interface IOrder extends Document {
+    restaurant_id: mongoose.Types.ObjectId;
     token: string;
-    table: mongoose.Types.ObjectId;
+    table?: mongoose.Types.ObjectId | null;
     waiter: mongoose.Types.ObjectId;
     items: IOrderItem[];
     status: OrderStatus;
+    orderType?: OrderType;
     subtotal: number;
     tax: number;
     discount: number;
     serviceCharge: number;
     grandTotal: number;
     seatsOccupied?: number;
+    latestAddonBatch?: number;
     partialPayments: IPartialPayment[];
     amountPaid: number;
     amountDue: number;

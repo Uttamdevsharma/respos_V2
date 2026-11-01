@@ -1,5 +1,6 @@
 import mongoose, { Document } from 'mongoose';
 export interface IExpense extends Document {
+    restaurant_id: mongoose.Types.ObjectId;
     title: string;
     amount: number;
     category: string;
