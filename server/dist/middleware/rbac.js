@@ -1,8 +1,11 @@
 import { ApiError } from '../utils/ApiError.js';
+const PLATFORM_ROLES = ['SUPER_ADMIN', 'CTO', 'PROJECT_MANAGER', 'SUPPORT_LEAD'];
+const ADMIN_EQUIVALENTS = ['admin', 'OWNER', 'BRANCH_MANAGER'];
 /**
  * Role-Based Access Control middleware.
  * Restricts route access to specified roles.
- * Note: 'OWNER' is automatically authorized if 'admin' is in the allowed roles.
+ * - If 'SUPER_ADMIN' is included in allowed roles, any platform staff role is authorized.
+ * - If 'admin' is included in allowed roles, OWNER and BRANCH_MANAGER are also authorized.
  */
 export const authorize = (...roles) => {
     return (req, _res, next) => {
@@ -11,9 +14,10 @@ export const authorize = (...roles) => {
             return;
         }
         const userRole = req.user.role;
-        const isAllowed = roles.includes(userRole) ||
-            (roles.includes('admin') && userRole === 'OWNER');
-        if (!isAllowed) {
+        const isPlatformAllowed = roles.includes('SUPER_ADMIN') && PLATFORM_ROLES.includes(userRole);
+        const isAdminAllowed = roles.includes('admin') && ADMIN_EQUIVALENTS.includes(userRole);
+        const isDirectlyAllowed = roles.includes(userRole);
+        if (!isPlatformAllowed && !isAdminAllowed && !isDirectlyAllowed) {
             next(ApiError.forbidden(`Role '${userRole}' is not authorized to access this resource`));
             return;
         }

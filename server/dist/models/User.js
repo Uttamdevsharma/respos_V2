@@ -22,7 +22,20 @@ const userSchema = new Schema({
     },
     role: {
         type: String,
-        enum: ['SUPER_ADMIN', 'OWNER', 'admin', 'waiter', 'cashier', 'kitchen'],
+        enum: [
+            // Platform Staff
+            'SUPER_ADMIN',
+            'CTO',
+            'PROJECT_MANAGER',
+            'SUPPORT_LEAD',
+            // Restaurant Client Staff
+            'OWNER',
+            'admin',
+            'BRANCH_MANAGER',
+            'cashier',
+            'waiter',
+            'kitchen',
+        ],
         default: 'waiter',
     },
     restaurant_id: {
@@ -31,9 +44,22 @@ const userSchema = new Schema({
         default: null,
         index: true,
     },
+    branch_name: {
+        type: String,
+        trim: true,
+    },
+    permissions: {
+        type: [String],
+        default: [],
+    },
     phone: {
         type: String,
         trim: true,
+    },
+    department: {
+        type: String,
+        trim: true,
+        default: 'Operations',
     },
     isActive: {
         type: Boolean,

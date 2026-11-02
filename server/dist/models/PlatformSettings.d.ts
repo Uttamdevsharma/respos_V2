@@ -33,6 +33,13 @@ export interface IPlatformSettings extends Document {
     eps_app_key?: string;
     eps_app_secret?: string;
     eps_is_sandbox: boolean;
+    sms_provider: 'GREENWEB' | 'MIM_SMS' | 'SSL_WIRELESS' | 'CUSTOM';
+    sms_gateway_url?: string;
+    sms_api_key?: string;
+    sms_sender_id?: string;
+    sms_is_masking: boolean;
+    sms_masking_id?: string;
+    sms_non_masking_id?: string;
     youtube_url: string;
     createdAt: Date;
     updatedAt: Date;

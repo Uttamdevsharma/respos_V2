@@ -1,5 +1,7 @@
 import mongoose, { Document } from 'mongoose';
-export type UserRole = 'SUPER_ADMIN' | 'OWNER' | 'admin' | 'waiter' | 'cashier' | 'kitchen';
+export type PlatformRole = 'SUPER_ADMIN' | 'CTO' | 'PROJECT_MANAGER' | 'SUPPORT_LEAD';
+export type RestaurantRole = 'OWNER' | 'admin' | 'BRANCH_MANAGER' | 'cashier' | 'waiter' | 'kitchen';
+export type UserRole = PlatformRole | RestaurantRole;
 export interface IUser extends Document {
     name: string;
     email: string;
@@ -7,6 +9,9 @@ export interface IUser extends Document {
     role: UserRole;
     phone?: string;
     restaurant_id?: mongoose.Types.ObjectId | null;
+    branch_name?: string;
+    permissions?: string[];
+    department?: string;
     isActive: boolean;
     refreshToken?: string | null;
     createdAt: Date;

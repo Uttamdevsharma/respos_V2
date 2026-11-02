@@ -15,8 +15,45 @@ import {
   ToggleLeft,
   ToggleRight,
   Shield,
-  RotateCw
+  RotateCw,
+  ChefHat,
+  Monitor,
+  Receipt,
+  UtensilsCrossed,
 } from 'lucide-react';
+
+const RESTAURANT_ROLES = [
+  {
+    role: 'BRANCH_MANAGER',
+    label: 'Branch Manager',
+    desc: 'Discounts, reports, branch operations, shift closures & staff management',
+    badge: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  },
+  {
+    role: 'admin',
+    label: 'Store Admin',
+    desc: 'Complete restaurant POS controls, menu configuration & settings',
+    badge: 'bg-primary/10 text-primary-dark border-primary/20',
+  },
+  {
+    role: 'cashier',
+    label: 'Cashier',
+    desc: 'Takeaway billing, split payments, cash drawer & settlement',
+    badge: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
+  {
+    role: 'kitchen',
+    label: 'Kitchen Chef',
+    desc: 'Kitchen Display System (KDS), bump bar, recipe preparation alerts',
+    badge: 'bg-rose-50 text-rose-700 border-rose-200',
+  },
+  {
+    role: 'waiter',
+    label: 'Waiter / Captain',
+    desc: 'Table layout, handheld order taking & instant digital KOT push',
+    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  },
+];
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -76,7 +113,7 @@ export default function UsersPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email) {
-      toast.error('Name and Email are required parameters');
+      toast.error('Name and Email are required');
       return;
     }
     if (!isEditing && password.length < 6) {
@@ -91,14 +128,14 @@ export default function UsersPage() {
       if (isEditing && selectedUser) {
         const { data } = await api.put(`/users/${selectedUser._id}`, payload);
         if (data.success) {
-          toast.success('User profile updated');
+          toast.success('Staff profile updated');
           fetchUsers();
           setIsModalOpen(false);
         }
       } else {
         const { data } = await api.post('/users', payload);
         if (data.success) {
-          toast.success('User created successfully');
+          toast.success('Staff member onboarded successfully');
           fetchUsers();
           setIsModalOpen(false);
         }
@@ -109,15 +146,15 @@ export default function UsersPage() {
   };
 
   const handleDelete = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user account?')) return;
+    if (!confirm('Are you sure you want to delete this staff account?')) return;
     try {
       const { data } = await api.delete(`/users/${userId}`);
       if (data.success) {
-        toast.success('User deleted');
+        toast.success('Staff account deleted');
         fetchUsers();
       }
     } catch (error) {
-      toast.error('Failed to delete user');
+      toast.error('Failed to delete staff member');
     }
   };
 
@@ -125,7 +162,7 @@ export default function UsersPage() {
     try {
       const { data } = await api.patch(`/users/${user._id}/toggle`);
       if (data.success) {
-        toast.success(`User account status updated`);
+        toast.success('Staff account status toggled');
         fetchUsers();
       }
     } catch (error) {
@@ -135,22 +172,44 @@ export default function UsersPage() {
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto bg-background">
-      <Topbar title="Staff Settings" subtitle="Administer employee roles & access policies" />
+      <Topbar title="Staff & Roles Management" subtitle="Manage restaurant staff, shifts, and access levels" />
 
       <main className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Role Matrix Highlights */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {RESTAURANT_ROLES.map((r) => (
+            <div
+              key={r.role}
+              className="bg-surface p-3.5 rounded-2xl border border-outline-variant/30 shadow-xs space-y-1"
+            >
+              <span className={`inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded border ${r.badge}`}>
+                {r.label}
+              </span>
+              <p className="text-[11px] text-on-surface-variant leading-relaxed">{r.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Header Action Bar */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface p-4 rounded-2xl border border-outline-variant/30 shadow-sm">
-          <h3 className="text-base font-black text-on-surface">Restaurant Staff Directory</h3>
+          <div>
+            <h3 className="text-base font-black text-on-surface">Restaurant Staff Directory</h3>
+            <p className="text-xs text-on-surface-variant">Active personnel authorized to access POS terminals</p>
+          </div>
           <div className="flex gap-2 w-full sm:w-auto justify-end">
             <button
               onClick={handleOpenAdd}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-on-primary rounded-xl text-xs font-bold transition-all press-effect shadow-md shadow-primary/20"
+              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-on-primary rounded-xl text-xs font-bold transition-all press-effect shadow-md shadow-primary/20 cursor-pointer"
             >
               <Plus size={14} />
-              Register Staff
+              Register New Staff
             </button>
             <button
-              onClick={() => { setLoading(true); fetchUsers(); }}
-              className="p-2 bg-surface hover:bg-surface-container-high rounded-xl border border-outline-variant/30 transition-all press-effect"
+              onClick={() => {
+                setLoading(true);
+                fetchUsers();
+              }}
+              className="p-2 bg-surface hover:bg-surface-container-high rounded-xl border border-outline-variant/30 transition-all press-effect cursor-pointer"
             >
               <RotateCw size={14} className={loading ? 'animate-spin' : ''} />
             </button>
@@ -158,7 +217,9 @@ export default function UsersPage() {
         </div>
 
         {loading ? (
-          <div className="py-20 flex justify-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div></div>
+          <div className="py-20 flex justify-center">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+          </div>
         ) : (
           <div className="bg-surface rounded-2xl border border-outline-variant/50 shadow-sm overflow-hidden">
             <div className="overflow-x-auto scroll-hide">
@@ -167,9 +228,9 @@ export default function UsersPage() {
                   <tr className="bg-surface-container-low text-on-surface-variant text-[10px] font-black uppercase tracking-wider border-b border-outline-variant/30">
                     <th className="px-6 py-4">Name</th>
                     <th className="px-6 py-4">Email</th>
-                    <th className="px-6 py-4">Role</th>
-                    <th className="px-6 py-4">Phone</th>
-                    <th className="px-6 py-4 text-center">Active Status</th>
+                    <th className="px-6 py-4">Assigned Role</th>
+                    <th className="px-6 py-4">Phone Number</th>
+                    <th className="px-6 py-4 text-center">Status</th>
                     <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -179,44 +240,50 @@ export default function UsersPage() {
                       <td className="px-6 py-4 font-black text-on-surface">{staff.name}</td>
                       <td className="px-6 py-4 text-on-surface-variant">{staff.email}</td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase border ${staff.role === 'admin'
-                            ? 'border-primary bg-primary/5 text-primary-dark'
-                            : staff.role === 'kitchen'
-                              ? 'border-secondary bg-secondary/5 text-secondary'
+                        <span
+                          className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase border ${
+                            staff.role === 'BRANCH_MANAGER'
+                              ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+                              : staff.role === 'admin'
+                              ? 'border-primary/30 bg-primary/10 text-primary-dark'
+                              : staff.role === 'kitchen'
+                              ? 'border-rose-300 bg-rose-50 text-rose-700'
                               : staff.role === 'cashier'
-                                ? 'border-tertiary bg-tertiary/5 text-tertiary'
-                                : 'border-outline bg-surface-container text-on-surface-variant'
-                          }`}>
-                          {staff.role}
+                              ? 'border-amber-300 bg-amber-50 text-amber-700'
+                              : 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                          }`}
+                        >
+                          {staff.role === 'BRANCH_MANAGER' ? 'Branch Manager' : staff.role}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-on-surface-variant">{staff.phone || 'N/A'}</td>
+                      <td className="px-6 py-4 text-on-surface-variant font-mono">{staff.phone || '—'}</td>
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => handleToggleStatus(staff)}
-                          className="transition-all press-effect"
+                          className="transition-all press-effect cursor-pointer"
                         >
                           {staff.isActive ? (
                             <ToggleRight className="text-tertiary w-8 h-8" />
                           ) : (
-                            <ToggleLeft className="text-on-surface-variant/40 w-8 h-8" />
+                            <ToggleLeft className="text-outline w-8 h-8 opacity-40" />
                           )}
                         </button>
                       </td>
-                      <td className="px-6 py-4 text-right flex justify-end gap-1.5 mt-1.5">
-                        <button
-                          onClick={() => handleOpenEdit(staff)}
-                          className="p-2 bg-surface-container text-on-surface-variant hover:text-primary rounded-lg transition-all press-effect"
-                        >
-                          <Edit2 size={12} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(staff._id)}
-                          className="p-2 bg-surface-container text-on-surface-variant hover:text-error rounded-lg transition-all press-effect"
-                          disabled={staff.email === 'admin@gastroflow.com'}
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenEdit(staff)}
+                            className="p-1.5 hover:bg-surface-container-high rounded-lg text-on-surface-variant transition-colors cursor-pointer"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(staff._id)}
+                            className="p-1.5 hover:bg-error-container/30 text-error rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -227,22 +294,27 @@ export default function UsersPage() {
         )}
       </main>
 
-      {/* Staff Edit/Add Modal */}
+      {/* ─── ADD / EDIT STAFF MODAL ─────────────────────────────────────── */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-surface rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-outline-variant/30 animate-scale-in">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-base font-black text-primary-dark">
-                {isEditing ? 'Modify Employee Profile' : 'Register New Employee'}
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-1 rounded-full hover:bg-surface-container text-on-surface-variant">
-                <X size={16} />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-surface border border-outline-variant/30 rounded-2xl w-full max-w-md shadow-2xl p-6 relative">
+            <div className="flex justify-between items-center mb-5">
+              <h4 className="text-base font-black text-on-surface">
+                {isEditing ? 'Edit Staff Credentials' : 'Register Restaurant Staff'}
+              </h4>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1 hover:bg-surface-container-high rounded-lg text-on-surface-variant cursor-pointer"
+              >
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
               <div>
-                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Full Name</label>
+                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">
+                  Full Name *
+                </label>
                 <input
                   type="text"
                   value={name}
@@ -253,7 +325,9 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Email Address</label>
+                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">
+                  Email Address *
+                </label>
                 <input
                   type="email"
                   value={email}
@@ -272,7 +346,7 @@ export default function UsersPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary font-mono"
                   required={!isEditing}
                   minLength={6}
                 />
@@ -280,25 +354,31 @@ export default function UsersPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Role Permission</label>
+                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">
+                    Role & Permission *
+                  </label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value as UserRole)}
-                    className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary font-bold text-on-surface-variant"
+                    className="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary font-bold text-on-surface-variant cursor-pointer"
                   >
-                    <option value="waiter">Waiter</option>
+                    <option value="waiter">Waiter / Captain</option>
                     <option value="cashier">Cashier</option>
-                    <option value="kitchen">Kitchen Staff</option>
-                    <option value="admin">System Admin</option>
+                    <option value="kitchen">Kitchen Chef</option>
+                    <option value="BRANCH_MANAGER">Branch Manager</option>
+                    <option value="admin">Store Admin</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Contact Phone</label>
+                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">
+                    Contact Phone
+                  </label>
                   <input
                     type="text"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary"
+                    placeholder="01711223344"
+                    className="w-full px-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary font-mono"
                   />
                 </div>
               </div>
@@ -307,15 +387,15 @@ export default function UsersPage() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-3 bg-surface-container hover:bg-surface-container-high text-xs font-bold rounded-xl transition-all press-effect"
+                  className="flex-1 py-3 bg-surface-container hover:bg-surface-container-high text-xs font-bold rounded-xl transition-all press-effect cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-primary text-on-primary text-xs font-bold rounded-xl transition-all press-effect shadow-md shadow-primary/20"
+                  className="flex-1 py-3 bg-primary text-on-primary text-xs font-bold rounded-xl transition-all press-effect shadow-md shadow-primary/20 cursor-pointer"
                 >
-                  Save employee
+                  {isEditing ? 'Save Changes' : 'Register Staff'}
                 </button>
               </div>
             </form>

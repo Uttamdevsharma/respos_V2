@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '../../store/auth.store';
 import Sidebar from '../../components/layout/sidebar';
+import { AnnouncementBanner } from '../../components/announcements/AnnouncementBanner';
 import {
   Menu,
   X,
@@ -20,6 +21,7 @@ import {
   Wallet,
   CreditCard,
   LifeBuoy,
+  Megaphone,
 } from 'lucide-react';
 import Link from 'next/link';
 import { socket } from '../../lib/socket';
@@ -194,6 +196,7 @@ export default function DashboardLayout({
     Wallet,
     CreditCard,
     LifeBuoy,
+    Megaphone,
   };
 
   const navItems = [
@@ -206,6 +209,7 @@ export default function DashboardLayout({
     { label: 'Accounts', href: '/accounts', icon: 'Wallet', roles: ['admin', 'OWNER'] },
     { label: 'Menu', href: '/menu', icon: 'BookOpen', roles: ['admin', 'OWNER', 'kitchen'] },
     { label: 'Users', href: '/users', icon: 'Users', roles: ['admin', 'OWNER'] },
+    { label: 'Notices & Updates', href: '/notices', icon: 'Megaphone', roles: ['admin', 'OWNER', 'waiter', 'cashier', 'kitchen'] },
     { label: 'Subscription', href: '/subscription', icon: 'CreditCard', roles: ['admin', 'OWNER'] },
     { label: 'Support Tickets', href: '/support-tickets', icon: 'LifeBuoy', roles: ['admin', 'OWNER'] },
     { label: 'Settings', href: '/settings', icon: 'Settings', roles: ['admin', 'OWNER'] },
@@ -237,16 +241,16 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen bg-background text-on-surface flex flex-col md:flex-row">
-      {/* Desktop Sidebar (visible on md+) */}
-      <Sidebar />
+    <div className="h-screen w-screen bg-background text-on-surface flex flex-col overflow-hidden">
+      {/* ── 1. Full-Width Top Red Marquee Banner (Across entire screen) ── */}
+      <AnnouncementBanner />
 
       {/* Mobile Top Bar Header (visible on <md) */}
       <header className="md:hidden h-16 bg-surface border-b border-outline-variant/30 flex items-center justify-between px-6 shrink-0 z-30 shadow-sm">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="p-1.5 hover:bg-surface-container-high rounded-xl text-on-surface-variant transition-all press-effect"
+            className="p-1.5 hover:bg-surface-container-high rounded-xl text-on-surface-variant transition-all press-effect cursor-pointer"
           >
             <Menu size={22} />
           </button>
@@ -279,7 +283,7 @@ export default function DashboardLayout({
               </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-1 hover:bg-surface-container-high rounded-lg text-on-surface-variant transition-all"
+                className="p-1 hover:bg-surface-container-high rounded-lg text-on-surface-variant transition-all cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -296,10 +300,11 @@ export default function DashboardLayout({
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`flex items-center gap-3 py-3 px-4 mx-4 rounded-lg transition-all duration-200 press-effect text-sm font-semibold ${isActive
+                      className={`flex items-center gap-3 py-3 px-4 mx-4 rounded-lg transition-all duration-200 press-effect text-sm font-semibold ${
+                        isActive
                           ? 'bg-primary text-on-primary shadow-sm'
                           : 'text-on-surface-variant hover:bg-surface-container-high'
-                        }`}
+                      }`}
                     >
                       {Icon && <Icon size={18} />}
                       <span>{item.label}</span>
@@ -316,7 +321,7 @@ export default function DashboardLayout({
                   logout();
                   window.location.href = '/login';
                 }}
-                className="w-full py-2.5 text-on-surface-variant hover:text-error hover:bg-error-container/30 rounded-lg flex items-center justify-center gap-2 transition-all text-sm font-medium"
+                className="w-full py-2.5 text-on-surface-variant hover:text-error hover:bg-error-container/30 rounded-lg flex items-center justify-center gap-2 transition-all text-sm font-medium cursor-pointer"
               >
                 <LogOut size={16} />
                 Logout
@@ -326,9 +331,15 @@ export default function DashboardLayout({
         </div>
       )}
 
-      {/* Main Content Space */}
-      <div className="flex-1 md:pl-64 flex flex-col h-screen overflow-hidden">
-        {children}
+      {/* ── 2. Body Container: Desktop Sidebar on Left + Main Content on Right ── */}
+      <div className="flex-1 flex flex-row min-h-0 overflow-hidden">
+        {/* Desktop Sidebar (visible on md+) */}
+        <Sidebar />
+
+        {/* Main Content Space */}
+        <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+          {children}
+        </div>
       </div>
     </div>
   );

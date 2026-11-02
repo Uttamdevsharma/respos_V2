@@ -44,6 +44,7 @@ api.interceptors.request.use(
           } catch (err) {
             // refresh failed; clear stored auth so subsequent logic can handle it
             localStorage.removeItem('gastroflow_token');
+            localStorage.removeItem('gastroflow_refresh_token');
             localStorage.removeItem('gastroflow_user');
           } finally {
             (api as any)._isRefreshing = false;
@@ -115,6 +116,7 @@ api.interceptors.response.use(
             (api as any)._failedQueue = [];
             // Clear stored auth on refresh failure
             localStorage.removeItem('gastroflow_token');
+            localStorage.removeItem('gastroflow_refresh_token');
             localStorage.removeItem('gastroflow_user');
             reject(err);
           })

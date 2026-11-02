@@ -45,6 +45,15 @@ export interface IPlatformSettings extends Document {
   eps_app_secret?: string;
   eps_is_sandbox: boolean;
 
+  // 6. SMS Gateway Configuration
+  sms_provider: 'GREENWEB' | 'MIM_SMS' | 'SSL_WIRELESS' | 'CUSTOM';
+  sms_gateway_url?: string;
+  sms_api_key?: string;
+  sms_sender_id?: string;
+  sms_is_masking: boolean;
+  sms_masking_id?: string;
+  sms_non_masking_id?: string;
+
   youtube_url: string;
   createdAt: Date;
   updatedAt: Date;
@@ -217,6 +226,42 @@ const platformSettingsSchema = new Schema<IPlatformSettings>(
     eps_is_sandbox: {
       type: Boolean,
       default: true,
+    },
+
+    // 6. SMS Gateway Configuration
+    sms_provider: {
+      type: String,
+      enum: ['GREENWEB', 'MIM_SMS', 'SSL_WIRELESS', 'CUSTOM'],
+      default: 'GREENWEB',
+    },
+    sms_gateway_url: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    sms_api_key: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    sms_sender_id: {
+      type: String,
+      default: 'RestroBiz',
+      trim: true,
+    },
+    sms_is_masking: {
+      type: Boolean,
+      default: false,
+    },
+    sms_masking_id: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    sms_non_masking_id: {
+      type: String,
+      default: '',
+      trim: true,
     },
 
     youtube_url: {

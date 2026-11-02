@@ -1,7 +1,9 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-export type UserRole = 'SUPER_ADMIN' | 'OWNER' | 'admin' | 'waiter' | 'cashier' | 'kitchen';
+export type PlatformRole = 'SUPER_ADMIN' | 'CTO' | 'PROJECT_MANAGER' | 'SUPPORT_LEAD';
+export type RestaurantRole = 'OWNER' | 'admin' | 'BRANCH_MANAGER' | 'cashier' | 'waiter' | 'kitchen';
+export type UserRole = PlatformRole | RestaurantRole;
 
 export interface IUser extends Document {
   name: string;
@@ -10,6 +12,9 @@ export interface IUser extends Document {
   role: UserRole;
   phone?: string;
   restaurant_id?: mongoose.Types.ObjectId | null;
+  branch_name?: string;
+  permissions?: string[];
+  department?: string;
   isActive: boolean;
   refreshToken?: string | null;
   createdAt: Date;
@@ -40,7 +45,20 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['SUPER_ADMIN', 'OWNER', 'admin', 'waiter', 'cashier', 'kitchen'],
+      enum: [
+        // Platform Staff
+        'SUPER_ADMIN',
+        'CTO',
+        'PROJECT_MANAGER',
+        'SUPPORT_LEAD',
+        // Restaurant Client Staff
+        'OWNER',
+        'admin',
+        'BRANCH_MANAGER',
+        'cashier',
+        'waiter',
+        'kitchen',
+      ],
       default: 'waiter',
     },
     restaurant_id: {
@@ -49,9 +67,22 @@ const userSchema = new Schema<IUser>(
       default: null,
       index: true,
     },
+    branch_name: {
+      type: String,
+      trim: true,
+    },
+    permissions: {
+      type: [String],
+      default: [],
+    },
     phone: {
       type: String,
       trim: true,
+    },
+    department: {
+      type: String,
+      trim: true,
+      default: 'Operations',
     },
     isActive: {
       type: Boolean,

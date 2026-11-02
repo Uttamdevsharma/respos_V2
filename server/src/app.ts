@@ -18,6 +18,7 @@ import superAdminRoutes from './modules/super-admin/super-admin.routes.js';
 import subscriptionRoutes from './modules/subscription/subscription.routes.js';
 import { publicLiveChatRouter, superAdminLiveChatRouter } from './modules/support/liveChat.routes.js';
 import { tenantSupportTicketRouter, superAdminSupportTicketRouter } from './modules/support/supportTicket.routes.js';
+import tenantNoticeRouter from './modules/tenant-notice/tenant-notice.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -54,6 +55,7 @@ app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/super-admin/live-chat', superAdminLiveChatRouter);
 app.use('/api/super-admin/support-tickets', superAdminSupportTicketRouter);
 app.use('/api/support-tickets', tenantSupportTicketRouter);
+app.use('/api/tenant/notices', tenantNoticeRouter);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/tables', tableRoutes);
 app.use('/api/categories', categoryRoutes);

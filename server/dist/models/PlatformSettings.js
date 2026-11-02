@@ -161,6 +161,41 @@ const platformSettingsSchema = new Schema({
         type: Boolean,
         default: true,
     },
+    // 6. SMS Gateway Configuration
+    sms_provider: {
+        type: String,
+        enum: ['GREENWEB', 'MIM_SMS', 'SSL_WIRELESS', 'CUSTOM'],
+        default: 'GREENWEB',
+    },
+    sms_gateway_url: {
+        type: String,
+        default: '',
+        trim: true,
+    },
+    sms_api_key: {
+        type: String,
+        default: '',
+        trim: true,
+    },
+    sms_sender_id: {
+        type: String,
+        default: 'RestroBiz',
+        trim: true,
+    },
+    sms_is_masking: {
+        type: Boolean,
+        default: false,
+    },
+    sms_masking_id: {
+        type: String,
+        default: '',
+        trim: true,
+    },
+    sms_non_masking_id: {
+        type: String,
+        default: '',
+        trim: true,
+    },
     youtube_url: {
         type: String,
         default: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',

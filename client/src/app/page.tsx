@@ -46,6 +46,12 @@ export default function LandingPage() {
   const { projectName, youtubeUrl } = usePlatform();
   const videoEmbed = getEmbedUrl(youtubeUrl);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const faqs = [
     {
@@ -183,15 +189,32 @@ export default function LandingPage() {
                   </span>
                 </div>
 
-                {/* Responsive Iframe Container */}
-                <div className="relative aspect-video w-full bg-slate-950">
-                  <iframe
-                    src={videoEmbed}
-                    title="Software Demonstration"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="w-full h-full border-0"
-                  />
+                {/* Responsive Video / Preview Container */}
+                <div className="relative aspect-video w-full bg-slate-950 flex items-center justify-center overflow-hidden">
+                  {isPlaying ? (
+                    <iframe
+                      src={`${videoEmbed}?autoplay=1`}
+                      title="Software Demonstration"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full border-0"
+                    />
+                  ) : (
+                    <div
+                      onClick={() => setIsPlaying(true)}
+                      className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950 flex flex-col items-center justify-center text-center p-6 cursor-pointer group transition-all"
+                    >
+                      <div className="w-16 h-16 rounded-full bg-blue-600/90 group-hover:bg-blue-600 group-hover:scale-110 text-white flex items-center justify-center shadow-lg shadow-blue-600/40 transition-all mb-3">
+                        <Play size={24} className="ml-1 fill-white" />
+                      </div>
+                      <h4 className="text-white font-black text-sm tracking-wide group-hover:text-blue-400 transition-colors">
+                        Watch {projectName || 'RestroBiz'} Demo
+                      </h4>
+                      <p className="text-slate-400 text-xs mt-1">
+                        Click to play 2-minute POS &amp; Kitchen Display walkthrough
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* 3 Tab Highlights underneath */}

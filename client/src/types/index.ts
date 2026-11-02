@@ -1,5 +1,7 @@
 // === User ===
-export type UserRole = 'SUPER_ADMIN' | 'OWNER' | 'admin' | 'waiter' | 'cashier' | 'kitchen';
+export type PlatformRole = 'SUPER_ADMIN' | 'CTO' | 'PROJECT_MANAGER' | 'SUPPORT_LEAD';
+export type RestaurantRole = 'OWNER' | 'admin' | 'BRANCH_MANAGER' | 'cashier' | 'waiter' | 'kitchen';
+export type UserRole = PlatformRole | RestaurantRole;
 
 export interface User {
   _id: string;
@@ -7,9 +9,21 @@ export interface User {
   email: string;
   role: UserRole;
   phone?: string;
+  department?: string;
+  permissions?: string[];
   restaurant_id?: string | null;
   restaurant?: Restaurant | null;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlatformRoleItem {
+  _id: string;
+  name: string;
+  description: string;
+  permissions: string[];
+  is_system: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -301,3 +315,131 @@ export interface ApiResponse<T> {
 
 // === Support & Live Chat ===
 export * from './support';
+
+
+// === Module 1: Quotations ===
+export interface QuotationColumn {
+  key: string;
+  label: string;
+  width?: string;
+}
+
+export interface SoftwareRow {
+  sl: number | string;
+  scope: string;
+  particulars: string;
+}
+
+export interface HardwareRow {
+  sl: number | string;
+  product: string;
+  specifications: string;
+  amount: number | string;
+}
+
+export type QuotationStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED';
+
+export interface PlatformQuotation {
+  _id: string;
+  ref_no: string;
+  quote_date: string;
+  client_name: string;
+  organization_name?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  subject: string;
+  software_columns?: QuotationColumn[];
+  software_rows?: SoftwareRow[];
+  software_amount?: number;
+  plan_name?: string;
+  billing_cycle?: string;
+  license_fee_title?: string;
+  license_fee_amount?: number;
+  subscription_amount?: number;
+  recurring_note?: string;
+  has_hardware?: boolean;
+  hardware_columns?: QuotationColumn[];
+  hardware_rows?: HardwareRow[];
+  hardware_amount?: number;
+  grand_total: number;
+  in_words?: string;
+  project_breakdown?: string;
+  terms_conditions?: string;
+  client_requirements?: string;
+  deliverables?: string;
+  additional_notes?: string;
+  company_signatory_name?: string;
+  company_signatory_title?: string;
+  company_phone?: string;
+  company_email?: string;
+  status: QuotationStatus;
+  email_sent_at?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// === Module 2: System Notices & Announcements ===
+export type NoticeType = 'ANNOUNCEMENT' | 'URGENT' | 'MAINTENANCE' | 'UPDATE' | 'FEATURE';
+export type NoticeTargetType = 'ALL' | 'SPECIFIC';
+
+export interface SystemNotice {
+  _id: string;
+  title: string;
+  content: string;
+  type: NoticeType;
+  badge_text?: string;
+  pinned: boolean;
+  is_published: boolean;
+  show_banner: boolean;
+  banner_duration_days: number;
+  banner_expires_at?: string;
+  target_type: NoticeTargetType;
+  target_business_ids?: string[];
+  read_count?: number;
+  is_read?: boolean;
+  read_at?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// === Module 3: SMS Management ===
+export type SmsProvider = 'GREENWEB' | 'MIM_SMS' | 'SSL_WIRELESS' | 'CUSTOM';
+export type SmsDeliveryStatus = 'DELIVERED' | 'FAILED' | 'PENDING';
+export type SmsCampaignType = 'BULK' | 'DUE_REMINDER' | 'CUSTOM' | 'EXPIRY_ALERT' | 'TEST';
+
+export interface SmsLogItem {
+  _id: string;
+  recipient_phone: string;
+  recipient_name?: string;
+  restaurant_name?: string;
+  message: string;
+  char_count: number;
+  sms_count: number;
+  is_unicode: boolean;
+  provider: string;
+  sender_id?: string;
+  channel?: 'SMS' | 'EMAIL' | 'BOTH';
+  status: SmsDeliveryStatus;
+  gateway_response?: string;
+  payload?: any;
+  campaign_type: SmsCampaignType;
+  createdAt: string;
+}
+
+export interface SmsSettings {
+  sms_provider: SmsProvider;
+  sms_gateway_url?: string;
+  sms_api_key?: string;
+  sms_sender_id?: string;
+  sms_is_masking: boolean;
+  sms_masking_id?: string;
+  sms_non_masking_id?: string;
+}
+
+export interface SmsStats {
+  total_delivered: number;
+  total_failed: number;
+  total_sms_units: number;
+  today_delivered: number;
+}
