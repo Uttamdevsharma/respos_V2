@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import Topbar from '../../../components/layout/topbar';
 import api, { BASE_URL } from '../../../lib/api';
 import { Settings } from '../../../types';
-import { applyBrandColor } from '../../../lib/colorUtils';
 import toast from 'react-hot-toast';
 import {
   Save,
@@ -12,15 +11,15 @@ import {
   Percent,
   MapPin,
   Phone,
+  Mail,
+  FileText,
   Settings as SettingsIcon,
   RotateCw,
   ImagePlus,
   Trash2,
   Image as ImageIcon,
-  LayoutTemplate,
-  Palette,
-  Type,
-  AlignLeft,
+  Receipt,
+  Sparkles,
 } from 'lucide-react';
 
 // ── Helper: build full URL for a stored image path ──────────────────────────
@@ -30,33 +29,13 @@ function imgUrl(path?: string | null) {
   return `${BASE_URL}${path}`;
 }
 
-// ── Preset brand colors ──────────────────────────────────────────────────────
-const presetColors = [
-  { label: 'Navy Blue',    value: '#1a3c5e' },
-  { label: 'Deep Purple',  value: '#3b1f6e' },
-  { label: 'Forest Green', value: '#14532d' },
-  { label: 'Crimson',      value: '#7f1d1d' },
-  { label: 'Teal',         value: '#134e4a' },
-  { label: 'Slate',        value: '#1e293b' },
-  { label: 'Indigo',       value: '#1e1b4b' },
-  { label: 'Amber Dark',   value: '#78350f' },
-  { label: 'Rose Dark',    value: '#881337' },
-  { label: 'Cyan Dark',    value: '#164e63' },
-];
-
 // ── Reusable image-upload card ───────────────────────────────────────────────
-function BrandingImageCard({
-  label,
-  description,
-  icon: Icon,
+function LogoUploadCard({
   currentUrl,
   uploading,
   onUpload,
   onDelete,
 }: {
-  label: string;
-  description: string;
-  icon: React.ElementType;
   currentUrl: string | null;
   uploading: boolean;
   onUpload: (file: File) => void;
@@ -66,67 +45,95 @@ function BrandingImageCard({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Icon size={14} className="text-primary" />
-        <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-wider">
-          {label}
-        </span>
+      <div>
+        <label className="text-xs font-bold text-on-surface">Restaurant Logo</label>
+        <p className="text-[11px] text-on-surface-variant">
+          This logo is displayed in the dashboard header, navigation bar, and printed at the top of customer invoices.
+        </p>
       </div>
-      <p className="text-[10px] text-on-surface-variant">{description}</p>
 
-      {/* Preview */}
-      <div className="relative w-full h-40 rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-low overflow-hidden group">
-        {currentUrl ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={currentUrl}
-              alt={label}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-            {/* Overlay actions */}
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => inputRef.current?.click()}
-                disabled={uploading}
-                className="flex items-center gap-1.5 px-3 py-2 bg-white/20 backdrop-blur text-white rounded-xl text-[10px] font-bold hover:bg-white/30 transition-all"
-              >
-                <ImagePlus size={12} />
-                Change
-              </button>
+      <div className="flex items-center gap-4">
+        {/* Preview box */}
+        <div className="relative w-28 h-28 rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-low overflow-hidden flex items-center justify-center group shrink-0">
+          {currentUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={currentUrl}
+                alt="Restaurant Logo"
+                className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+              />
+              {/* Overlay actions */}
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => inputRef.current?.click()}
+                  disabled={uploading}
+                  className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur text-white rounded-xl text-xs transition-all"
+                  title="Change Logo"
+                >
+                  <ImagePlus size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  disabled={uploading}
+                  className="p-2 bg-red-500/80 hover:bg-red-500 backdrop-blur text-white rounded-xl text-xs transition-all"
+                  title="Remove Logo"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={uploading}
+              className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors p-2"
+            >
+              {uploading ? (
+                <>
+                  <span className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span className="text-[10px] font-semibold">Uploading…</span>
+                </>
+              ) : (
+                <>
+                  <ImagePlus size={24} className="opacity-40" />
+                  <span className="text-[10px] font-bold">Upload Logo</span>
+                  <span className="text-[8px] opacity-60">PNG, JPG, WEBP</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Change/Remove quick action text buttons */}
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={uploading}
+              className="px-3.5 py-1.5 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/40 rounded-xl text-xs font-bold text-on-surface transition-all press-effect"
+            >
+              {currentUrl ? 'Change Logo' : 'Choose File'}
+            </button>
+            {currentUrl && (
               <button
                 type="button"
                 onClick={onDelete}
                 disabled={uploading}
-                className="flex items-center gap-1.5 px-3 py-2 bg-red-500/80 backdrop-blur text-white rounded-xl text-[10px] font-bold hover:bg-red-500 transition-all"
+                className="px-3 py-1.5 bg-error-container/40 hover:bg-error-container text-error rounded-xl text-xs font-bold transition-all press-effect"
               >
-                <Trash2 size={12} />
-                Delete
+                Remove
               </button>
-            </div>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            disabled={uploading}
-            className="w-full h-full flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:text-primary transition-colors"
-          >
-            {uploading ? (
-              <>
-                <span className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-[10px] font-semibold">Uploading…</span>
-              </>
-            ) : (
-              <>
-                <ImagePlus size={28} className="opacity-40" />
-                <span className="text-[10px] font-semibold">Click to upload</span>
-                <span className="text-[9px] opacity-60">JPG, PNG, WEBP · max 5 MB</span>
-              </>
             )}
-          </button>
-        )}
+          </div>
+          <p className="text-[10px] text-on-surface-variant/70">
+            Recommended size: 200x200px or transparent PNG. Max 5MB.
+          </p>
+        </div>
       </div>
 
       <input
@@ -144,23 +151,20 @@ function BrandingImageCard({
   );
 }
 
-// ── Main page ────────────────────────────────────────────────────────────────
+// ── Main Settings page ───────────────────────────────────────────────────────
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Text fields
+  // Operational variables
   const [restaurantName, setRestaurantName] = useState('');
-  const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
   const [taxRate, setTaxRate] = useState<number | ''>(15);
   const [serviceChargeRate, setServiceChargeRate] = useState<number | ''>(5);
-
-  // Branding fields
-  const [brandColor, setBrandColor]     = useState('#1a3c5e');
-  const [tagline, setTagline]           = useState('Restaurant POS System');
-  const [description, setDescription]  = useState('');
+  const [invoiceFooter, setInvoiceFooter] = useState('Thank you for dining with us! Please visit again.');
 
   // Image uploading state
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -172,13 +176,12 @@ export default function SettingsPage() {
         const s = data.data;
         setSettings(s);
         setRestaurantName(s.restaurantName || '');
-        setAddress(s.address || '');
         setPhone(s.phone || '');
+        setEmail(s.email || '');
+        setAddress(s.address || '');
         setTaxRate(s.taxRate ?? 15);
         setServiceChargeRate(s.serviceChargeRate ?? 5);
-        setBrandColor(s.brandColor || '#1a3c5e');
-        setTagline(s.tagline || 'Restaurant POS System');
-        setDescription(s.description || '');
+        setInvoiceFooter(s.invoiceFooter || 'Thank you for dining with us! Please visit again.');
       }
     } catch {
       toast.error('Failed to load system settings');
@@ -187,28 +190,34 @@ export default function SettingsPage() {
     }
   };
 
-  useEffect(() => { fetchSettings(); }, []);
+  useEffect(() => {
+    fetchSettings();
+  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalTaxRate = taxRate === '' ? 0 : Number(taxRate);
     const finalServiceRate = serviceChargeRate === '' ? 0 : Number(serviceChargeRate);
 
-    if (!restaurantName || finalTaxRate < 0 || finalServiceRate < 0) {
-      toast.error('Invalid settings parameters');
+    if (!restaurantName.trim() || finalTaxRate < 0 || finalServiceRate < 0) {
+      toast.error('Please enter a valid restaurant name and tax rates');
       return;
     }
+
     setSaving(true);
     try {
       const { data } = await api.put('/settings', {
-        restaurantName, address, phone, taxRate: finalTaxRate, serviceChargeRate: finalServiceRate,
-        brandColor, tagline, description,
+        restaurantName: restaurantName.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        address: address.trim(),
+        taxRate: finalTaxRate,
+        serviceChargeRate: finalServiceRate,
+        invoiceFooter: invoiceFooter.trim(),
       });
       if (data.success) {
-        toast.success('Settings saved successfully');
+        toast.success('Restaurant settings saved successfully');
         setSettings(data.data);
-        // Apply brand color to entire app immediately
-        if (brandColor) applyBrandColor(brandColor);
       }
     } catch {
       toast.error('Failed to update configurations');
@@ -218,7 +227,7 @@ export default function SettingsPage() {
   };
 
   // ── Image upload / delete helpers ────────────────────────────────────────
-  const uploadImage = async (field: 'logo', file: File) => {
+  const uploadImage = async (file: File) => {
     setUploadingLogo(true);
     try {
       const formData = new FormData();
@@ -228,16 +237,16 @@ export default function SettingsPage() {
       });
       if (data.success) {
         setSettings(data.data);
-        toast.success('Restaurant logo updated');
+        toast.success('Restaurant logo updated successfully');
       }
     } catch {
-      toast.error('Image upload failed');
+      toast.error('Logo upload failed');
     } finally {
       setUploadingLogo(false);
     }
   };
 
-  const deleteImage = async (field: 'logo') => {
+  const deleteImage = async () => {
     setUploadingLogo(true);
     try {
       const { data } = await api.post('/settings/upload-images', { deleteLogo: 'true' });
@@ -252,341 +261,245 @@ export default function SettingsPage() {
     }
   };
 
-  // ── Live color preview gradient ──────────────────────────────────────────
-  const gradientStyle = {
-    background: `linear-gradient(135deg, ${brandColor}dd 0%, ${brandColor}99 50%, ${brandColor}cc 100%)`,
-  };
-
   return (
     <div className="flex-1 flex flex-col overflow-y-auto bg-background">
-      <Topbar title="Restaurant Settings" subtitle="Configure system parameters" />
+      <Topbar title="Restaurant Settings" subtitle="Configure restaurant profile, billing contact & operational rates" />
 
-      <main className="p-3 sm:p-6 max-w-2xl space-y-4 sm:space-y-6">
+      <main className="p-3 sm:p-6 max-w-3xl space-y-4 sm:space-y-6">
 
         {/* Header card */}
-        <div className="flex justify-between items-center bg-surface p-4 rounded-2xl border border-outline-variant/30 shadow-sm">
+        <div className="flex justify-between items-center bg-surface p-4 sm:p-5 rounded-2xl border border-outline-variant/30 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-container text-primary-dark rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-primary-container text-primary-dark rounded-xl flex items-center justify-center shrink-0">
               <SettingsIcon size={20} />
             </div>
             <div>
-              <h3 className="text-sm font-black text-on-surface">Configuration Dashboard</h3>
-              <p className="text-[10px] text-on-surface-variant font-medium">Update restaurant operational variables</p>
+              <h3 className="text-sm font-black text-on-surface">Restaurant Operational Settings</h3>
+              <p className="text-[11px] text-on-surface-variant font-medium">
+                Information configured here automatically updates your dashboard branding and customer printed invoices.
+              </p>
             </div>
           </div>
           <button
             onClick={() => { setLoading(true); fetchSettings(); }}
-            className="p-2 bg-surface hover:bg-surface-container-high rounded-xl border border-outline-variant/30 transition-all press-effect"
+            className="p-2.5 bg-surface hover:bg-surface-container-high rounded-xl border border-outline-variant/30 transition-all press-effect shrink-0"
+            title="Refresh settings"
           >
-            <RotateCw size={14} className={loading ? 'animate-spin' : ''} />
+            <RotateCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
 
         {loading ? (
-          <div className="py-20 flex justify-center">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="py-24 flex flex-col items-center justify-center gap-3">
+            <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs text-on-surface-variant font-medium">Loading settings...</p>
           </div>
         ) : (
-          <>
-            {/* ── Restaurant Brand Logo ────────────────────────────────────────── */}
-            <div className="bg-surface rounded-2xl border border-outline-variant/50 shadow-sm p-6 space-y-6">
-              <h4 className="text-xs font-black text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
-                <ImageIcon size={14} className="text-primary" />
-                Restaurant Branding
-              </h4>
+          <form onSubmit={handleSave} className="space-y-5">
 
-              <div className="max-w-md">
-                {/* Logo */}
-                <BrandingImageCard
-                  label="Restaurant Logo"
-                  description="Logo printed on customer receipts and shown on your branch dashboard header."
-                  icon={Store}
-                  currentUrl={imgUrl(settings?.logo)}
-                  uploading={uploadingLogo}
-                  onUpload={(file) => uploadImage('logo', file)}
-                  onDelete={() => deleteImage('logo')}
-                />
-              </div>
-            </div>
-
-            {/* ── Brand Color ────────────────────────────────────────────── */}
-            <div className="bg-surface rounded-2xl border border-outline-variant/50 shadow-sm p-6 space-y-5">
-              <h4 className="text-xs font-black text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
-                <Palette size={14} className="text-primary" />
-                Brand Color
-              </h4>
-
-              {/* Live preview strip */}
-              <div
-                className="w-full h-16 rounded-xl flex items-center justify-center transition-all duration-300 shadow-inner"
-                style={gradientStyle}
-              >
-                <span className="text-white font-black text-sm tracking-wide drop-shadow">
-                  {restaurantName || 'Restaurant Name'}
-                </span>
+            {/* ── 1. Restaurant Identity & Logo ── */}
+            <div className="bg-surface rounded-2xl border border-outline-variant/40 shadow-sm p-5 sm:p-6 space-y-5">
+              <div className="flex items-center gap-2 pb-3 border-b border-outline-variant/20">
+                <Store size={18} className="text-primary" />
+                <h4 className="text-xs font-black text-on-surface uppercase tracking-wider">
+                  Restaurant Identity & Logo
+                </h4>
               </div>
 
-              {/* Preset swatches */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
-                  Quick Presets
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {presetColors.map((c) => (
-                    <button
-                      key={c.value}
-                      type="button"
-                      title={c.label}
-                      onClick={() => {
-                        setBrandColor(c.value);
-                        applyBrandColor(c.value);
-                      }}
-                      className="w-8 h-8 rounded-full border-2 transition-all hover:scale-110 press-effect"
-                      style={{
-                        backgroundColor: c.value,
-                        borderColor: brandColor === c.value ? '#fff' : 'transparent',
-                        outline: brandColor === c.value ? `2px solid ${c.value}` : 'none',
-                        outlineOffset: '2px',
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Custom color picker */}
-              <div className="flex items-center gap-3">
-                <div className="space-y-1 flex-1">
-                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
-                    Custom Color (HEX)
-                  </label>
-                  <input
-                    type="text"
-                    value={brandColor}
-                    onChange={(e) => {
-                      setBrandColor(e.target.value);
-                      if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
-                        applyBrandColor(e.target.value);
-                      }
-                    }}
-                    placeholder="#1a3c5e"
-                    className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary font-mono font-semibold"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
-                    Picker
-                  </label>
-                  <input
-                    type="color"
-                    value={brandColor}
-                    onChange={(e) => {
-                      setBrandColor(e.target.value);
-                      applyBrandColor(e.target.value);
-                    }}
-                    className="w-12 h-10 rounded-xl border border-outline-variant cursor-pointer bg-transparent p-0.5"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* ── Login Page Text ────────────────────────────────────────── */}
-            <div className="bg-surface rounded-2xl border border-outline-variant/50 shadow-sm p-6 space-y-5">
-              <h4 className="text-xs font-black text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
-                <Type size={14} className="text-primary" />
-                Login Page Content
-              </h4>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
-                  Tagline
-                  <span className="ml-1 text-on-surface-variant/50 normal-case font-normal">
-                    — shown below the restaurant name
-                  </span>
+              {/* Restaurant Name */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface">
+                  Restaurant Name <span className="text-error">*</span>
                 </label>
                 <input
                   type="text"
-                  value={tagline}
-                  onChange={(e) => setTagline(e.target.value)}
-                  placeholder="Restaurant POS System"
-                  className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary font-semibold"
+                  required
+                  value={restaurantName}
+                  onChange={(e) => setRestaurantName(e.target.value)}
+                  placeholder="e.g. Bahar Restaurant"
+                  className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-bold text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
+                <p className="text-[10px] text-on-surface-variant/70">
+                  Appears on the top of customer receipts, tickets, dashboard header, and POS terminal.
+                </p>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
-                  <AlignLeft size={10} />
-                  Description
-                  <span className="ml-1 text-on-surface-variant/50 normal-case font-normal">
-                    — paragraph shown on the left panel
-                  </span>
+              {/* Logo Upload Card */}
+              <LogoUploadCard
+                currentUrl={imgUrl(settings?.logo)}
+                uploading={uploadingLogo}
+                onUpload={uploadImage}
+                onDelete={deleteImage}
+              />
+            </div>
+
+            {/* ── 2. Contact Information (Printed on Bills & Invoices) ── */}
+            <div className="bg-surface rounded-2xl border border-outline-variant/40 shadow-sm p-5 sm:p-6 space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-outline-variant/20">
+                <Phone size={18} className="text-primary" />
+                <div>
+                  <h4 className="text-xs font-black text-on-surface uppercase tracking-wider">
+                    Contact Details
+                  </h4>
+                  <p className="text-[10px] text-on-surface-variant">
+                    These contact details will be printed on customer invoices, payslips, and order tokens.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Phone / Hotline */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                    <Phone size={13} className="text-on-surface-variant" />
+                    Support Hotline / Phone
+                  </label>
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+880 1700-000000"
+                    className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-medium text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
+
+                {/* Email */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                    <Mail size={13} className="text-on-surface-variant" />
+                    Official Email
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="contact@bahar.com"
+                    className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-medium text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Physical Address */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                  <MapPin size={13} className="text-on-surface-variant" />
+                  Postal / Physical Address
                 </label>
                 <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                  placeholder="Professional restaurant management..."
-                  className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary font-semibold resize-none"
+                  rows={2}
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="House 12, Road 5, Dhanmondi, Dhaka-1205"
+                  className="w-full px-4 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-medium text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none transition-all"
                 />
               </div>
+            </div>
 
-              {/* Live preview of login left panel */}
-              <div
-                className="w-full rounded-2xl p-5 flex flex-col items-center text-center gap-2 shadow-inner transition-all duration-300"
-                style={gradientStyle}
-              >
-                {settings?.logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={imgUrl(settings.logo)!}
-                    alt="Logo preview"
-                    className="w-14 h-14 rounded-full object-cover border-4 border-white/40 shadow-lg"
-                  />
-                ) : (
-                  <div className="w-14 h-14 rounded-full bg-white/20 border-4 border-white/40 flex items-center justify-center shadow-lg">
-                    <span className="text-white font-black text-xl">
-                      {(restaurantName || 'G').charAt(0).toUpperCase()}
-                    </span>
+            {/* ── 3. Operational Taxation & Fees ── */}
+            <div className="bg-surface rounded-2xl border border-outline-variant/40 shadow-sm p-5 sm:p-6 space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-outline-variant/20">
+                <Percent size={18} className="text-primary" />
+                <h4 className="text-xs font-black text-on-surface uppercase tracking-wider">
+                  Operational Taxation & Fees
+                </h4>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* VAT Rate */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface">VAT Rate (%)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={taxRate}
+                      onChange={(e) => setTaxRate(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-bold text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary pr-8"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-on-surface-variant">%</span>
                   </div>
-                )}
-                <p className="text-white font-black text-lg mt-1">{restaurantName || 'Restaurant Name'}</p>
-                <p className="text-white/80 text-xs">{tagline || 'Restaurant POS System'}</p>
-                <div className="w-12 h-0.5 bg-white/40 rounded-full my-1" />
-                <p className="text-white/60 text-[10px] max-w-xs leading-relaxed">
-                  {description || 'Your description will appear here...'}
+                  <p className="text-[10px] text-on-surface-variant/70">Applied automatically to orders on checkout.</p>
+                </div>
+
+                {/* Service Charge */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface">Service Charge (%)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={serviceChargeRate}
+                      onChange={(e) => setServiceChargeRate(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-bold text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary pr-8"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-on-surface-variant">%</span>
+                  </div>
+                  <p className="text-[10px] text-on-surface-variant/70">Restaurant staff service fee added to subtotal.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* ── 4. Invoice & Receipt Customization ── */}
+            <div className="bg-surface rounded-2xl border border-outline-variant/40 shadow-sm p-5 sm:p-6 space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-outline-variant/20">
+                <Receipt size={18} className="text-primary" />
+                <div>
+                  <h4 className="text-xs font-black text-on-surface uppercase tracking-wider">
+                    Invoice & Receipt Customization
+                  </h4>
+                  <p className="text-[10px] text-on-surface-variant">
+                    Customize the message printed at the bottom of customer bills and thermal slips.
+                  </p>
+                </div>
+              </div>
+
+              {/* Invoice Footer Greeting / Note */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                  <FileText size={13} className="text-on-surface-variant" />
+                  Invoice Footer Message / Thank-You Note
+                </label>
+                <input
+                  type="text"
+                  value={invoiceFooter}
+                  onChange={(e) => setInvoiceFooter(e.target.value)}
+                  placeholder="e.g. Thank you for dining with us! Please visit again."
+                  className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-medium text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                />
+                <p className="text-[10px] text-on-surface-variant/70">
+                  Example: &ldquo;Thank you for dining with us! Follow us on Facebook / Instagram.&rdquo;
                 </p>
               </div>
             </div>
 
-            {/* ── Restaurant info + financial ───────────────────────────── */}
-            <form onSubmit={handleSave} className="bg-surface rounded-2xl border border-outline-variant/50 shadow-sm p-6 space-y-6">
+            {/* Save Button */}
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full sm:w-auto px-8 py-3 bg-primary hover:brightness-110 text-on-primary rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all shadow-md shadow-primary/20 press-effect disabled:opacity-50"
+              >
+                {saving ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin" />
+                    <span>Saving Changes...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    <span>Save All Settings</span>
+                  </>
+                )}
+              </button>
+            </div>
 
-              {/* Identity section */}
-              <div className="space-y-4">
-                <h4 className="text-xs font-black text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
-                  <Store size={14} className="text-primary" />
-                  Restaurant Identity
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
-                      Restaurant Name
-                    </label>
-                    <input
-                      type="text"
-                      value={restaurantName}
-                      onChange={(e) => setRestaurantName(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary font-semibold"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
-                      Support Hotline
-                    </label>
-                    <div className="relative">
-                      <Phone size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant" />
-                      <input
-                        type="text"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary font-semibold"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
-                    Postal Address
-                  </label>
-                  <div className="relative">
-                    <MapPin size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant" />
-                    <input
-                      type="text"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary font-semibold"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Financial Parameters */}
-              <div className="space-y-4 pt-6 border-t border-outline-variant/20 font-semibold">
-                <h4 className="text-xs font-black text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
-                  <Percent size={14} className="text-primary" />
-                  Operational Taxation &amp; Fees
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
-                      VAT rate (%)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="any"
-                      value={taxRate}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '') {
-                          setTaxRate('');
-                        } else {
-                          const num = parseFloat(val);
-                          setTaxRate(isNaN(num) ? '' : Math.max(0, num));
-                        }
-                      }}
-                      className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary font-semibold"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
-                      Service Charge (%)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="any"
-                      value={serviceChargeRate}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '') {
-                          setServiceChargeRate('');
-                        } else {
-                          const num = parseFloat(val);
-                          setServiceChargeRate(isNaN(num) ? '' : Math.max(0, num));
-                        }
-                      }}
-                      className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary font-semibold"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Save Button */}
-              <div className="pt-6 border-t border-outline-variant/20 flex justify-end">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex items-center gap-2 px-6 py-3.5 bg-primary text-on-primary rounded-xl text-xs font-bold transition-all press-effect shadow-md shadow-primary/20 disabled:opacity-50"
-                >
-                  {saving ? (
-                    <>
-                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Saving…
-                    </>
-                  ) : (
-                    <>
-                      <Save size={16} />
-                      Save All Settings
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </>
+          </form>
         )}
+
       </main>
     </div>
   );

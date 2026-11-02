@@ -294,10 +294,12 @@ export interface Settings {
   restaurantName: string;
   address: string;
   phone: string;
+  email?: string;
   taxRate: number;
   serviceChargeRate: number;
   currency: string;
   logo?: string;
+  invoiceFooter?: string;
   loginImage?: string;
   brandColor?: string;
   tagline?: string;

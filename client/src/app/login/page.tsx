@@ -99,7 +99,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex" suppressHydrationWarning>
 
       {/* ── Left: Branding Panel ─────────────────────────────────── */}
       <div

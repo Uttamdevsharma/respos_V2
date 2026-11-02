@@ -7,6 +7,7 @@ interface OrderState {
   addItem: (item: Omit<OrderItem, 'quantity'> & { quantity?: number }) => void;
   removeItem: (index: number) => void;
   updateQuantity: (index: number, delta: number) => void;
+  setQuantity: (index: number, quantity: number) => void;
   updateNote: (index: number, notes: string) => void;
   setTable: (tableId: string | null) => void;
   clearOrder: () => void;
@@ -45,6 +46,13 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     if (items[index].quantity <= 0) {
       items.splice(index, 1);
     }
+    set({ items });
+  },
+
+  setQuantity: (index, quantity) => {
+    const items = [...get().items];
+    if (!items[index]) return;
+    items[index] = { ...items[index], quantity: Math.max(0, quantity) };
     set({ items });
   },
 

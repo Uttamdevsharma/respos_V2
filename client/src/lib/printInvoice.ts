@@ -1,4 +1,11 @@
 import { Order, Settings } from '../types';
+import { BASE_URL } from './api';
+
+function getInvoiceLogoHtml(logo?: string | null) {
+  if (!logo) return '';
+  const url = logo.startsWith('http') ? logo : `${BASE_URL}${logo}`;
+  return `<div style="text-align:center;margin-bottom:6px;"><img src="${url}" style="max-height:48px;max-width:130px;object-fit:contain;" alt="Logo" /></div>`;
+}
 
 // ─── Label helpers ────────────────────────────────────────────────────────────
 const METHOD_LABELS: Record<string, string> = {
@@ -244,7 +251,7 @@ export const downloadTxtInvoice = (order: Order, settings: Settings) => {
   let txt = '';
   txt += '        ' + settings.restaurantName.toUpperCase() + '\n';
   txt += '   ' + settings.address + '\n';
-  txt += '        Phone: ' + settings.phone + '\n';
+  txt += '        Hotline: ' + settings.phone + (settings.email ? ' | ' + settings.email : '') + '\n';
   txt += '             SALES RECEIPT\n';
   txt += line;
   txt += `Token #: ${order.token.padEnd(15)} Table: T-${((order.table as any)?.number || 0).toString().padStart(2, '0')}\n`;
@@ -296,7 +303,7 @@ export const downloadTxtInvoice = (order: Order, settings: Settings) => {
   }
 
   txt += line;
-  txt += '        Thank you for dining with us!\n';
+  txt += '        ' + (settings.invoiceFooter || 'Thank you for dining with us! Please visit again.') + '\n';
   txt += '        Powered by GastroFlow POS\n';
 
   const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });

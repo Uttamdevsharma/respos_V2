@@ -9,7 +9,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "tsx src/scripts/seed.ts",
-    "seed:orders": "tsx src/scripts/seed-orders.ts"
+    "seed:orders": "tsx src/scripts/seed-orders.ts",
+    "fix:account": "tsx src/scripts/fix-account.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

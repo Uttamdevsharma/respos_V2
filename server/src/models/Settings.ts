@@ -5,10 +5,12 @@ export interface ISettings extends Document {
   restaurantName: string;
   address: string;
   phone: string;
+  email?: string;
   taxRate: number;
   serviceChargeRate: number;
   currency: string;
   logo?: string;
+  invoiceFooter?: string;
   loginImage?: string;
   brandColor?: string;    // hex color e.g. "#1a3c5e"
   tagline?: string;       // e.g. "Restaurant POS System"
@@ -39,7 +41,10 @@ const settingsSchema = new Schema<ISettings>(
     phone: {
       type: String,
       default: '+880 1700-000000',
-      trim: true,
+    },
+    email: {
+      type: String,
+      default: '',
     },
     taxRate: {
       type: Number,
@@ -56,6 +61,11 @@ const settingsSchema = new Schema<ISettings>(
     currency: {
       type: String,
       default: '৳',
+    },
+    invoiceFooter: {
+      type: String,
+      default: 'Thank you for dining with us! Please visit again.',
+      trim: true,
     },
     logo: {
       type: String,

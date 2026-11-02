@@ -23,14 +23,18 @@ import {
   Trash2,
   PlusCircle,
   UtensilsCrossed,
-  ArrowRight,
+  ArrowRight, ArrowLeft,
   Ban,
-  AlertCircle
+  AlertCircle,
+  Monitor,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { printInvoice, downloadTxtInvoice } from '../../../lib/printInvoice';
 import { socket } from '../../../lib/socket';
 import { playSound } from '../../../lib/sound';
 import { useAuthStore } from '../../../store/auth.store';
+import Link from 'next/link';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -61,9 +65,29 @@ export default function OrdersPage() {
   // Channel filter state
   const [channelFilter, setChannelFilter] = useState<string>('all');
 
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
+
   const fetchOrders = async () => {
     try {
-      const endpoint = user?.role === 'waiter' ? '/orders/waiter' : '/orders';
+      const endpoint = '/orders';
       const { data } = await api.get(endpoint);
       if (data.success) {
         setOrders(data.data);
@@ -96,33 +120,31 @@ export default function OrdersPage() {
 
     // Listen to real-time events
     const handleOrderCreated = (order: Order) => {
-      const belongsToUser = user?.role !== 'waiter' || (typeof order.waiter === 'object' ? order.waiter._id : order.waiter) === user?._id;
-      if (belongsToUser) {
-        setOrders((prev) => [order, ...prev.filter((o) => o._id !== order._id)]);
-        playSound.playChime();
-        const qty = order.items.reduce((sum, i) => sum + i.quantity, 0);
-        toast(`New Order #${order.token} (${qty} Item${qty !== 1 ? 's' : ''}) received!`, { icon: '🔔' });
-      }
+      setOrders((prev) => [order, ...prev.filter((o) => o._id !== order._id)]);
+      playSound.playChime();
+      const qty = order.items.reduce((sum, i) => sum + i.quantity, 0);
+      toast(`New Order #${order.token} (${qty} Item${qty !== 1 ? 's' : ''}) received!`, { icon: '🔔' });
     };
 
     const handleOrderUpdated = (order: Order) => {
-      const belongsToUser = user?.role !== 'waiter' || (typeof order.waiter === 'object' ? order.waiter._id : order.waiter) === user?._id;
-      if (belongsToUser) {
-        setOrders((prev) => {
-          const filtered = prev.filter((o) => o._id !== order._id);
-          return [order, ...filtered];
-        });
+      setOrders((prev) => {
+        const filtered = prev.filter((o) => o._id !== order._id);
+        return [order, ...filtered];
+      });
 
-        // Update selected modal details if open
-        setSelectedOrder((curr) => {
-          if (curr?._id === order._id) {
-            return order;
-          }
-          return curr;
-        });
+      // Update selected modal details if open
+      setSelectedOrder((curr) => {
+        if (curr?._id === order._id) {
+          return order;
+        }
+        return curr;
+      });
 
-        playSound.playBeep();
-        const qty = order.items.reduce((sum, i) => sum + i.quantity, 0);
+      playSound.playBeep();
+      const qty = order.items.reduce((sum, i) => sum + i.quantity, 0);
+      if (order.status === 'ready') {
+        toast.success(`🍽️ Order #${order.token} is READY to be served!`, { duration: 5000, icon: '🛎️' });
+      } else {
         toast(`Order #${order.token} (${qty} Item${qty !== 1 ? 's' : ''}) updated to ${order.status.toUpperCase()}`, { icon: '📢' });
       }
     };
@@ -379,6 +401,51 @@ export default function OrdersPage() {
       <Topbar title="Orders Audit Log" subtitle="Track live and historical guest tickets" />
 
       <main className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Quick Action Bar: Jump to POS */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-surface p-3.5 sm:p-4 rounded-2xl border border-outline-variant/30 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/dashboard"
+              onClick={() => {
+                if (typeof document !== 'undefined' && document.fullscreenElement && document.exitFullscreen) {
+                  document.exitFullscreen().catch(() => {});
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/40 rounded-xl text-xs sm:text-sm font-bold text-on-surface transition-all press-effect shadow-sm shrink-0"
+              title="Back to Dashboard (Show sidebar menu)"
+            >
+              <ArrowLeft size={16} />
+              <span>Dashboard</span>
+            </Link>
+            <div className="hidden sm:block">
+              <span className="text-sm font-black text-on-surface">Live Orders Audit</span>
+              <span className="text-[11px] text-on-surface-variant font-medium ml-2">• Track kitchen prep & serve guests</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="flex items-center gap-1.5 px-3 py-2 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/40 rounded-xl text-xs font-bold text-on-surface transition-all press-effect shadow-sm shrink-0"
+              title={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen (Hide browser tabs)'}
+            >
+              {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+              <span className="hidden sm:inline">{isFullscreen ? 'Exit Full' : 'Full Screen'}</span>
+            </button>
+            <Link
+              href="/pos"
+              onClick={() => {
+                if (typeof document !== 'undefined' && !document.fullscreenElement) {
+                  document.documentElement.requestFullscreen().catch(() => {});
+                }
+              }}
+              className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-primary text-on-primary hover:brightness-110 rounded-xl text-xs font-black shadow-md shadow-primary/20 transition-all press-effect"
+            >
+              <Monitor size={15} />
+              <span>⚡ Open Full POS / New Order</span>
+            </Link>
+          </div>
+        </div>
         {/* Channel Breakdown Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2">
           {[
@@ -416,18 +483,33 @@ export default function OrdersPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface p-4 rounded-2xl border border-outline-variant/30 shadow-sm">
           {/* Status filters */}
           <div className="flex flex-wrap gap-2">
-            {['all', 'pending', 'preparing', 'ready', 'served', 'completed', 'cancelled'].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all press-effect ${filter === status
-                    ? 'bg-primary text-on-primary'
-                    : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
-                  }`}
-              >
-                {status.toUpperCase()}
-              </button>
-            ))}
+            {['all', 'pending', 'preparing', 'ready', 'served', 'completed', 'cancelled'].map((status) => {
+              const count = status === 'all' ? orders.length : orders.filter((o) => o.status === status).length;
+              const isReadyAlert = status === 'ready' && count > 0;
+              return (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all press-effect flex items-center gap-1.5 ${filter === status
+                      ? 'bg-primary text-on-primary shadow-sm'
+                      : isReadyAlert
+                      ? 'bg-purple-600/15 text-purple-700 dark:text-purple-300 border border-purple-500/50 animate-pulse'
+                      : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
+                    }`}
+                >
+                  <span>{status.toUpperCase()}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    filter === status
+                      ? 'bg-white/20 text-white'
+                      : isReadyAlert
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-surface-container text-on-surface-variant'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex gap-2 w-full md:w-auto items-center">
@@ -575,13 +657,14 @@ export default function OrdersPage() {
                               </>
                             )}
 
-                            {order.status === 'ready' && (user?.role === 'admin' || user?.role === 'waiter') && (
+                            {order.status === 'ready' && (
                               <button
                                 onClick={() => handleServeOrder(order._id)}
-                                className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-bold flex items-center gap-1 hover:brightness-110 transition-all press-effect"
+                                className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-black flex items-center gap-1.5 transition-all press-effect shadow-md shadow-purple-600/25 animate-pulse"
+                                title="Food is ready in kitchen! Click to serve to table"
                               >
-                                <Utensils size={12} />
-                                Serve
+                                <Utensils size={13} />
+                                Serve Table
                               </button>
                             )}
                             <button

@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Topbar from '../../../components/layout/topbar';
+import Link from 'next/link';
+import { useUIStore } from '../../../store/ui.store';
+import { useBadgeStore } from '../../../store/badge.store';
+import { useAuthStore } from '../../../store/auth.store';
+import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import api, { BASE_URL, getImageUrl } from '../../../lib/api';
 import { Table, Category, MenuItem, Settings, OrderType } from '../../../types';
 import { useOrderStore } from '../../../store/order.store';
@@ -12,7 +16,8 @@ import { playSound } from '../../../lib/sound';
 import {
   Plus, Minus, Trash2, Save, ShoppingBag, X,
   Search, UtensilsCrossed, ChevronDown, ChevronUp, Users,
-  CreditCard, Utensils, Ticket, FileText, ArrowRight, Wallet, CheckCircle
+  CreditCard, Utensils, Ticket, FileText, ArrowRight, ArrowLeft, Wallet, CheckCircle,
+  Menu, ClipboardList
 } from 'lucide-react';
 import { printPayFirstSlips } from '../../../lib/printInvoice';
 
@@ -65,54 +70,12 @@ function FoodDetailsModal({
   if (!item) return null;
 
   const rawOptionGroup = item.optionGroups && item.optionGroups.length > 0 ? item.optionGroups[0] : null;
-  let optionGroupTitle = rawOptionGroup?.title || 'Size (Required)';
-  let options = rawOptionGroup?.options || [];
+  const optionGroupTitle = rawOptionGroup?.title || 'Size';
+  const options = rawOptionGroup?.options || [];
 
-  if (options.length === 0) {
-    const lname = item.name.toLowerCase();
-    if (lname.includes('pizza')) {
-      optionGroupTitle = 'Size (Required)';
-      options = [
-        { name: 'small', price: item.price },
-        { name: 'medium', price: Math.round(item.price * 1.4) },
-        { name: 'large', price: Math.round(item.price * 1.8) },
-      ];
-    } else if (lname.includes('naan') || lname.includes('tandoori')) {
-      optionGroupTitle = 'Naan (Required)';
-      options = [
-        { name: 'Regular Naan', price: item.price },
-        { name: 'garlic Naan', price: item.price + 10 },
-        { name: 'Butter Naan', price: item.price + 20 },
-      ];
-    } else if (lname.includes('crab') || lname.includes('fry') || lname.includes('chicken')) {
-      optionGroupTitle = 'Size (Required)';
-      options = [
-        { name: '1 pcs', price: item.price },
-        { name: '2 pcs', price: Math.round(item.price * 1.8) },
-      ];
-    } else if (lname.includes('lacchi') || lname.includes('coffee') || lname.includes('tea') || lname.includes('juice') || lname.includes('drink')) {
-      optionGroupTitle = 'Size (Required)';
-      options = [
-        { name: 'R', price: item.price },
-        { name: 'M', price: item.price + 50 },
-      ];
-    } else if (lname.includes('burger')) {
-      optionGroupTitle = 'Size (Required)';
-      options = [
-        { name: 'Single Patty', price: item.price },
-        { name: 'Double Patty', price: item.price + 80 },
-      ];
-    } else {
-      optionGroupTitle = 'Size (Required)';
-      options = [
-        { name: 'Regular', price: item.price },
-        { name: 'Special / Large', price: item.price + 50 },
-      ];
-    }
-  }
-
-  const selectedOption = options[selectedOptionIndex] || options[0];
-  const unitPrice = getItemOptionUnitPrice(item.price, selectedOption);
+  const hasOptions = options.length > 0;
+  const selectedOption = hasOptions ? (options[selectedOptionIndex] || options[0]) : null;
+  const unitPrice = selectedOption ? getItemOptionUnitPrice(item.price, selectedOption) : item.price;
   const totalAmount = unitPrice * quantity;
 
   const handleAdd = () => {
@@ -144,7 +107,7 @@ function FoodDetailsModal({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant transition-colors"
+            className="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant transition-colors cursor-pointer"
           >
             <X size={16} />
           </button>
@@ -195,7 +158,7 @@ function FoodDetailsModal({
                       key={idx}
                       type="button"
                       onClick={() => setSelectedOptionIndex(idx)}
-                      className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs transition-all press-effect ${
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs transition-all press-effect cursor-pointer ${
                         isSelected
                           ? 'border-2 border-on-surface bg-surface shadow-sm font-bold text-on-surface'
                           : 'border border-outline-variant/40 bg-surface text-on-surface-variant hover:border-outline-variant'
@@ -240,7 +203,7 @@ function FoodDetailsModal({
               <button
                 type="button"
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-8 h-8 rounded-lg bg-surface border border-outline-variant/30 flex items-center justify-center text-on-surface hover:bg-surface-container transition-all press-effect"
+                className="w-8 h-8 rounded-lg bg-surface border border-outline-variant/30 flex items-center justify-center text-on-surface hover:bg-surface-container transition-all press-effect cursor-pointer"
               >
                 <Minus size={13} />
               </button>
@@ -248,7 +211,7 @@ function FoodDetailsModal({
               <button
                 type="button"
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-8 h-8 rounded-lg bg-surface border border-outline-variant/30 flex items-center justify-center text-on-surface hover:bg-surface-container transition-all press-effect"
+                className="w-8 h-8 rounded-lg bg-surface border border-outline-variant/30 flex items-center justify-center text-on-surface hover:bg-surface-container transition-all press-effect cursor-pointer"
               >
                 <Plus size={13} />
               </button>
@@ -258,7 +221,7 @@ function FoodDetailsModal({
           <button
             type="button"
             onClick={handleAdd}
-            className="flex-1 max-w-xs py-3.5 px-5 bg-on-surface text-surface rounded-2xl font-bold text-xs flex items-center justify-between shadow-xl hover:opacity-95 press-effect transition-all"
+            className="flex-1 max-w-xs py-3.5 px-5 bg-on-surface text-surface rounded-2xl font-bold text-xs flex items-center justify-between shadow-xl hover:opacity-95 press-effect transition-all cursor-pointer"
           >
             <span>Total TK {totalAmount.toFixed(2)}</span>
             <span className="flex items-center gap-1 opacity-90">
@@ -286,7 +249,10 @@ export default function POSPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [seatsToBook, setSeatsToBook] = useState<number>(1);
   const [cartOpen, setCartOpen] = useState<boolean>(false);
-  const [paymentMode, setPaymentMode] = useState<PaymentMode>('pay_first');
+  const { openSidebarDrawer } = useUIStore();
+  const { ordersCount } = useBadgeStore();
+  const { user } = useAuthStore();
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('pre_bill');
 
   // Food details modal state
   const [modalItem, setModalItem] = useState<MenuItem | null>(null);
@@ -304,7 +270,7 @@ export default function POSPage() {
   // Zustand order store (draft order)
   const {
     items: orderItems, selectedTableId, addItem, removeItem,
-    updateQuantity, updateNote, setTable, clearOrder, getSubtotal
+    updateQuantity, setQuantity, updateNote, setTable, clearOrder, getSubtotal
   } = useOrderStore();
 
   // ── Data loading ────────────────────────────────────────────────────────────
@@ -393,7 +359,7 @@ export default function POSPage() {
           menuItem: i.menuItem,
           name: i.name,
           price: i.price,
-          quantity: i.quantity,
+          quantity: Math.max(1, i.quantity || 1),
           notes: i.notes || ''
         }))
       };
@@ -443,7 +409,7 @@ export default function POSPage() {
           menuItem: i.menuItem,
           name: i.name,
           price: i.price,
-          quantity: i.quantity,
+          quantity: Math.max(1, i.quantity || 1),
           notes: i.notes || ''
         }))
       };
@@ -477,43 +443,127 @@ export default function POSPage() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-background">
-      <Topbar title="Point of Sale" subtitle="Create and manage orders" />
+      {/* ── Zen POS Header Bar (Full Window responsive across 22", 16", Tablets, Mobile) ── */}
+      <header className="h-14 sm:h-16 bg-surface border-b border-outline-variant/30 px-3 sm:px-5 flex items-center justify-between shrink-0 z-20 shadow-sm gap-2">
+        {/* Left: Back to Dashboard Button + Restaurant Branding */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/40 rounded-xl text-xs sm:text-sm font-bold text-on-surface transition-all press-effect shadow-sm shrink-0 cursor-pointer"
+            title="Back to Dashboard (Show sidebar menu)"
+          >
+            <ArrowLeft size={16} />
+            <span>Dashboard</span>
+          </Link>
+
+          <div className="flex items-center gap-2.5 min-w-0">
+            {settings?.logo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={settings.logo.startsWith('http') ? settings.logo : `${BASE_URL}${settings.logo}`}
+                alt={settings?.restaurantName || 'Logo'}
+                className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-xl border border-outline-variant/40 bg-surface shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-primary-container rounded-xl flex items-center justify-center shrink-0">
+                <span className="text-primary-dark font-black text-xs sm:text-sm">
+                  {(settings?.restaurantName || 'G').charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+            <div className="min-w-0 hidden md:block">
+              <h1 className="text-xs sm:text-sm font-black text-on-surface truncate">
+                {settings?.restaurantName || 'Point of Sale'}
+              </h1>
+              <p className="text-[10px] text-on-surface-variant/70 font-semibold truncate">
+                Zen Terminal • Active: {user?.name || 'Waiter'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Quick Switch to Orders + Theme + Mobile Cart Trigger */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Quick Switch to Orders Button */}
+          <Link
+            href="/orders"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/40 rounded-xl text-xs font-black text-on-surface transition-all press-effect shadow-sm cursor-pointer"
+            title="Switch to Kitchen Orders to serve guests"
+          >
+            <ClipboardList size={16} className="text-primary shrink-0" />
+            <span className="hidden sm:inline">Orders</span>
+            {ordersCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-primary text-on-primary shadow-sm animate-pulse">
+                {ordersCount}
+              </span>
+            )}
+          </Link>
+
+          {/* Mobile / Tablet Cart Drawer Trigger */}
+          <button
+            onClick={() => setCartOpen(true)}
+            className="lg:hidden relative p-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl transition-all press-effect shrink-0 cursor-pointer"
+            title="Open Order Ticket"
+          >
+            <ShoppingBag size={18} />
+            {totalItems > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-on-primary rounded-full text-[10px] font-black flex items-center justify-center shadow-md animate-scale-in">
+                {totalItems}
+              </span>
+            )}
+          </button>
+
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
+
+          <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container font-black text-xs flex items-center justify-center shrink-0">
+            {user?.name?.[0] || 'W'}
+          </div>
+        </div>
+      </header>
 
       <div className="flex-1 flex overflow-hidden relative">
 
         {/* ══ LEFT: Menu Catalog ══════════════════════════════════════════ */}
-        <section className="w-full lg:w-[68%] flex flex-col overflow-hidden bg-background">
+        <section className="w-full lg:w-[42%] xl:w-[40%] 2xl:w-[38%] shrink-0 flex flex-col overflow-hidden bg-background border-r border-outline-variant/30">
 
-          {/* Search + category strip */}
-          <div className="px-4 pt-4 pb-0 space-y-3 shrink-0">
+          {/* Search bar above categories */}
+          <div className="px-3 sm:px-4 pt-3 pb-1 shrink-0">
             <div className="relative">
-              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
               <input
                 type="text"
                 placeholder="Search menu items..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-10 py-3 bg-surface border border-outline-variant/40 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all shadow-sm"
+                className="w-full pl-9 pr-8 py-2 bg-surface border border-outline-variant/40 hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary/25 rounded-xl text-xs sm:text-sm outline-none transition-all placeholder:text-on-surface-variant/40 shadow-2xs text-on-surface"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary p-1">
-                  <X size={14} />
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary p-0.5 cursor-pointer"
+                  title="Clear search"
+                >
+                  <X size={13} />
                 </button>
               )}
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-3 scroll-hide">
+          </div>
+
+          {/* Category Filter Strip */}
+          <div className="px-3 sm:px-4 pt-1.5 pb-2 flex gap-1.5 sm:gap-2 overflow-x-auto scroll-hide shrink-0">
               <button
                 onClick={() => setSelectedCategory('all')}
-                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all press-effect whitespace-nowrap ${selectedCategory === 'all' ? 'bg-primary text-on-primary shadow-md shadow-primary/20' : 'bg-surface text-on-surface-variant border border-outline-variant/40 hover:border-primary/40 hover:text-primary'}`}
+                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all press-effect whitespace-nowrap cursor-pointer ${selectedCategory === 'all' ? 'bg-primary text-on-primary shadow-md shadow-primary/20' : 'bg-surface text-on-surface-variant border border-outline-variant/40 hover:border-primary/40 hover:text-primary'}`}
               >✦ All Menu</button>
               {categories.map(cat => (
                 <button
                   key={cat._id}
                   onClick={() => setSelectedCategory(cat._id)}
-                  className={`shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all press-effect whitespace-nowrap ${selectedCategory === cat._id ? 'bg-primary text-on-primary shadow-md shadow-primary/20' : 'bg-surface text-on-surface-variant border border-outline-variant/40 hover:border-primary/40 hover:text-primary'}`}
+                  className={`shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all press-effect whitespace-nowrap cursor-pointer ${selectedCategory === cat._id ? 'bg-primary text-on-primary shadow-md shadow-primary/20' : 'bg-surface text-on-surface-variant border border-outline-variant/40 hover:border-primary/40 hover:text-primary'}`}
                 >{cat.name}</button>
               ))}
-            </div>
           </div>
 
           {/* Menu grid */}
@@ -524,35 +574,84 @@ export default function POSPage() {
                 <p className="text-sm font-semibold">No items found</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-3">
                 {filteredMenu.map((item) => {
-                  const inCart = orderItems.find(o => o.menuItem === item._id);
+                  const inCart = orderItems.find((o) => o.menuItem === item._id);
                   const displayPrice = getDisplayCardPrice(item);
+                  const hasSizes = Boolean(
+                    item.optionGroups &&
+                    item.optionGroups.length > 0 &&
+                    item.optionGroups[0]?.options &&
+                    item.optionGroups[0].options.length > 0
+                  );
+
                   return (
                     <div
                       key={item._id}
-                      onClick={() => setModalItem(item)}
-                      className={`group relative bg-surface rounded-2xl border cursor-pointer overflow-hidden transition-all duration-200 press-effect hover:shadow-lg hover:-translate-y-0.5 ${inCart ? 'border-primary/50 shadow-md shadow-primary/10' : 'border-outline-variant/30 hover:border-primary/30'}`}
+                      onClick={() => {
+                        if (hasSizes) {
+                          setModalItem(item);
+                        } else {
+                          addItem({
+                            menuItem: item._id,
+                            name: item.name,
+                            price: item.price,
+                            quantity: 1,
+                          });
+                          playSound.playBeep();
+                          toast.success(`Added ${item.name}`);
+                        }
+                      }}
+                      className={`group relative bg-surface rounded-2xl border cursor-pointer overflow-hidden transition-all duration-200 press-effect hover:shadow-lg hover:-translate-y-0.5 flex flex-col ${
+                        inCart
+                          ? 'border-primary shadow-md shadow-primary/10 ring-1 ring-primary/40'
+                          : 'border-outline-variant/30 hover:border-primary/40'
+                      }`}
                     >
-                      <div className="relative w-full aspect-[4/3] bg-surface-container-low overflow-hidden">
+                      {/* Compact Image */}
+                      <div className="relative w-full h-24 sm:h-28 bg-surface-container-low overflow-hidden">
                         {item.image ? (
-                          <img src={getImageUrl(item.image)} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          <img
+                            src={getImageUrl(item.image)}
+                            alt={item.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center"><UtensilsCrossed size={28} className="text-outline-variant" /></div>
+                          <div className="w-full h-full flex items-center justify-center">
+                            <UtensilsCrossed size={24} className="text-outline-variant/50" />
+                          </div>
                         )}
-                        {typeof item.category !== 'string' && item.category.name && (
-                          <span className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full">{item.category.name}</span>
+
+                        {typeof item.category !== 'string' && item.category?.name && (
+                          <span className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-md">
+                            {item.category.name}
+                          </span>
                         )}
+
                         {inCart && (
-                          <div className="absolute top-2 right-2 w-6 h-6 bg-primary text-on-primary rounded-full flex items-center justify-center text-[10px] font-black shadow-md">{inCart.quantity}</div>
+                          <div className="absolute top-2 right-2 w-6 h-6 bg-primary text-on-primary rounded-full flex items-center justify-center text-[11px] font-black shadow-md">
+                            {inCart.quantity}
+                          </div>
                         )}
-                        <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-all flex items-center justify-center">
-                          <div className="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center opacity-0 group-hover:opacity-100 scale-50 group-hover:scale-100 transition-all shadow-lg"><Plus size={20} /></div>
-                        </div>
                       </div>
-                      <div className="p-2.5">
-                        <p className="text-xs font-bold text-on-surface leading-snug line-clamp-2">{item.name}</p>
-                        <p className="text-xs font-black text-primary mt-1">{formatCurrency(displayPrice)}</p>
+
+                      {/* Clean Item Title and Price (No long description clutter) */}
+                      <div className="p-2.5 flex-1 flex flex-col justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-on-surface line-clamp-1 group-hover:text-primary transition-colors">
+                            {item.name}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between mt-1.5 pt-1 border-t border-outline-variant/15">
+                          <span className="text-xs font-black text-primary">
+                            {formatCurrency(displayPrice)}
+                          </span>
+                          {hasSizes && (
+                            <span className="text-[9px] font-extrabold text-on-surface-variant/70 bg-surface-container px-1.5 py-0.5 rounded">
+                              Sizes
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -565,12 +664,12 @@ export default function POSPage() {
         {/* Mobile backdrop */}
         {cartOpen && <div onClick={() => setCartOpen(false)} className="lg:hidden fixed inset-0 z-30 bg-black/50 backdrop-blur-sm" />}
 
-        {/* ══ RIGHT: Clean Single Order Panel ══════════════════════════════ */}
+        {/* ══ RIGHT: Spacious Order Panel (More space on laptop, desktop, and tablet) ══════════════════════════════ */}
         <section className={`
-          fixed inset-y-0 right-0 z-40 w-full max-w-[390px] flex flex-col shadow-2xl transition-transform duration-300
-          lg:static lg:w-[32%] lg:h-full lg:shadow-none lg:translate-x-0
+          fixed inset-y-0 right-0 z-40 w-full max-w-[420px] lg:max-w-none flex flex-col shadow-2xl transition-transform duration-300
+          lg:static lg:flex-1 lg:h-full lg:shadow-none lg:translate-x-0
           ${cartOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
-          bg-surface border-l border-outline-variant/20
+          bg-surface flex flex-col overflow-hidden min-w-0
         `}>
 
           {/* Panel Header */}
@@ -598,7 +697,7 @@ export default function POSPage() {
                   {orderType.replace('_', ' ')}
                 </span>
               </label>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-3 xl:grid-cols-6 gap-1.5">
                 {[
                   { id: 'dine_in' as OrderType, label: 'Dine In', icon: '🍽️', activeStyle: 'bg-emerald-600 text-white border-emerald-600 shadow-sm' },
                   { id: 'takeaway' as OrderType, label: 'Takeaway', icon: '🛍️', activeStyle: 'bg-blue-600 text-white border-blue-600 shadow-sm' },
@@ -618,7 +717,7 @@ export default function POSPage() {
                           setTable(null);
                         }
                       }}
-                      className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all press-effect border ${
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all press-effect border cursor-pointer ${
                         isActive
                           ? `${ch.activeStyle} font-black ring-2 ring-primary/20 scale-[1.02]`
                           : 'bg-surface-container-low border-outline-variant/40 text-on-surface-variant hover:border-primary/40 hover:bg-surface-container'
@@ -632,68 +731,70 @@ export default function POSPage() {
               </div>
             </div>
 
-            {/* Table selector (Optional) */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
-                <UtensilsCrossed size={10} /> Table Assignment <span className="text-[9px] font-medium text-on-surface-variant/60">(Optional)</span>
-              </label>
-              <div className="relative">
-                <select
-                  value={selectedTableId || ''}
-                  onChange={(e) => setTable(e.target.value || null)}
-                  className="w-full appearance-none bg-surface-container-low border border-outline-variant/50 rounded-xl px-3 py-2.5 text-xs font-bold text-on-surface outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary pr-8"
-                >
-                  <option value="">— No Table / Takeaway —</option>
-                  {tables.map(t => {
-                    const rem = t.capacity - (t.occupiedSeats || 0);
-                    return (
-                      <option key={t._id} value={t._id} disabled={rem <= 0 && t._id !== selectedTableId}>
-                        Table {t.number.toString().padStart(2, '0')} · {t.location}
-                        {t.occupiedSeats && t.occupiedSeats > 0 ? ` [${t.occupiedSeats}/${t.capacity}]` : ''}
-                        {rem <= 0 && t._id !== selectedTableId ? ' — FULL' : ''}
-                      </option>
-                    );
-                  })}
-                </select>
-                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Table selector (Optional) */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
+                  <UtensilsCrossed size={10} /> Table Assignment <span className="text-[9px] font-medium text-on-surface-variant/60">(Optional)</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedTableId || ''}
+                    onChange={(e) => setTable(e.target.value || null)}
+                    className="w-full appearance-none bg-surface-container-low border border-outline-variant/50 rounded-xl px-3 py-2 text-xs font-bold text-on-surface outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary pr-8 cursor-pointer"
+                  >
+                    <option value="">— No Table / Takeaway —</option>
+                    {tables.map(t => {
+                      const rem = t.capacity - (t.occupiedSeats || 0);
+                      return (
+                        <option key={t._id} value={t._id} disabled={rem <= 0 && t._id !== selectedTableId}>
+                          Table {t.number.toString().padStart(2, '0')} · {t.location}
+                          {t.occupiedSeats && t.occupiedSeats > 0 ? ` [${t.occupiedSeats}/${t.capacity}]` : ''}
+                          {rem <= 0 && t._id !== selectedTableId ? ' — FULL' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" />
+                </div>
+
+                {selectedTable && (
+                  <div className="flex items-center justify-between bg-primary-container/30 border border-primary/20 rounded-xl px-2.5 py-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Users size={11} className="text-primary-dark" />
+                      <span className="text-[10px] font-bold text-primary-dark">Seats to book</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => setSeatsToBook(Math.max(1, seatsToBook - 1))} className="w-5 h-5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center cursor-pointer"><Minus size={10} /></button>
+                      <span className="w-4 text-center text-xs font-black text-primary-dark">{seatsToBook}</span>
+                      <button onClick={() => { const max = selectedTable.capacity - (selectedTable.occupiedSeats || 0); setSeatsToBook(Math.min(max, seatsToBook + 1)); }} className="w-5 h-5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center cursor-pointer"><Plus size={10} /></button>
+                      <span className="text-[9px] text-on-surface-variant ml-1">/{selectedTable.capacity - (selectedTable.occupiedSeats || 0)} free</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {selectedTable && (
-                <div className="flex items-center justify-between bg-primary-container/30 border border-primary/20 rounded-xl px-3 py-2">
-                  <div className="flex items-center gap-1.5">
-                    <Users size={11} className="text-primary-dark" />
-                    <span className="text-[10px] font-bold text-primary-dark">Seats to book</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button onClick={() => setSeatsToBook(Math.max(1, seatsToBook - 1))} className="w-6 h-6 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center"><Minus size={10} /></button>
-                    <span className="w-5 text-center text-sm font-black text-primary-dark">{seatsToBook}</span>
-                    <button onClick={() => { const max = selectedTable.capacity - (selectedTable.occupiedSeats || 0); setSeatsToBook(Math.min(max, seatsToBook + 1)); }} className="w-6 h-6 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center"><Plus size={10} /></button>
-                    <span className="text-[9px] text-on-surface-variant ml-1">/{selectedTable.capacity - (selectedTable.occupiedSeats || 0)} free</span>
-                  </div>
+              {/* Payment Mode toggle */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
+                  <CreditCard size={10} /> Payment Mode
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPaymentMode('pre_bill')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${paymentMode === 'pre_bill' ? 'bg-primary text-on-primary border-primary shadow-sm' : 'bg-surface-container-low border-outline-variant/40 text-on-surface-variant hover:border-primary/40'}`}
+                  >
+                    <Utensils size={12} />
+                    Eat First
+                  </button>
+                  <button
+                    onClick={() => setPaymentMode('pay_first')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${paymentMode === 'pay_first' ? 'bg-primary text-on-primary border-primary shadow-sm' : 'bg-surface-container-low border-outline-variant/40 text-on-surface-variant hover:border-primary/40'}`}
+                  >
+                    <CreditCard size={12} />
+                    Pay First
+                  </button>
                 </div>
-              )}
-            </div>
-
-            {/* Payment Mode toggle */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
-                <CreditCard size={10} /> Payment Mode
-              </label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPaymentMode('pay_first')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all border ${paymentMode === 'pay_first' ? 'bg-primary text-on-primary border-primary shadow-md shadow-primary/20' : 'bg-surface-container-low border-outline-variant/40 text-on-surface-variant hover:border-primary/40'}`}
-                >
-                  <CreditCard size={12} />
-                  Pay First
-                </button>
-                <button
-                  onClick={() => setPaymentMode('pre_bill')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all border ${paymentMode === 'pre_bill' ? 'bg-primary text-on-primary border-primary shadow-md shadow-primary/20' : 'bg-surface-container-low border-outline-variant/40 text-on-surface-variant hover:border-primary/40'}`}
-                >
-                  <Utensils size={12} />
-                  Eat First
-                </button>
               </div>
             </div>
           </div>
@@ -709,27 +810,98 @@ export default function POSPage() {
                 </div>
               </div>
             ) : (
-              orderItems.map((item, idx) => (
-                <div key={`${item.menuItem}-${idx}`} className="bg-surface-container-low/60 border border-outline-variant/20 rounded-xl p-3 space-y-2 animate-slide-up">
-                  <div className="flex items-start gap-2">
-                    <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center shrink-0">
-                      <span className="text-on-primary text-[10px] font-black">{item.quantity}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-on-surface leading-tight truncate">{item.name}</p>
-                      <p className="text-xs text-primary font-black mt-0.5">{formatCurrency(item.price * item.quantity)}</p>
-                    </div>
-                    <div className="flex items-center gap-1 bg-surface border border-outline-variant/30 rounded-lg p-0.5 shrink-0">
-                      <button onClick={() => updateQuantity(idx, -1)} className="w-6 h-6 flex items-center justify-center hover:bg-surface-container rounded text-on-surface-variant hover:text-primary transition-colors"><Minus size={11} /></button>
-                      <button onClick={() => updateQuantity(idx, 1)} className="w-6 h-6 flex items-center justify-center hover:bg-surface-container rounded text-on-surface-variant hover:text-primary transition-colors"><Plus size={11} /></button>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <input type="text" placeholder="Special notes..." value={item.notes || ''} onChange={(e) => updateNote(idx, e.target.value)} className="flex-1 bg-surface border border-outline-variant/20 rounded-lg px-2.5 py-1.5 text-[10px] outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant/40" />
-                    <button onClick={() => removeItem(idx)} className="w-7 h-7 flex items-center justify-center bg-error-container/40 hover:bg-error-container text-error rounded-lg transition-colors shrink-0"><Trash2 size={11} /></button>
-                  </div>
+              <>
+                {/* Column Headings (Highlighted) */}
+                <div className="sticky top-0 z-10 grid grid-cols-12 gap-2 px-3.5 py-2.5 bg-primary/10 dark:bg-primary/20 backdrop-blur-md rounded-xl text-[11px] font-black text-primary uppercase tracking-wider border border-primary/30 shadow-xs mb-2.5">
+                  <div className="col-span-5 font-black">Item & Note</div>
+                  <div className="col-span-3 text-center font-black">Quantity</div>
+                  <div className="col-span-2 text-right font-black">Total</div>
+                  <div className="col-span-2 text-center font-black">Action</div>
                 </div>
-              ))
+
+                {orderItems.map((item, idx) => (
+                  <div
+                    key={`${item.menuItem}-${idx}`}
+                    className="grid grid-cols-12 gap-2 items-center bg-surface-container-low/70 border border-outline-variant/30 rounded-xl p-3 hover:border-primary/40 transition-all shadow-sm"
+                  >
+                    {/* Col 1: Item & Note (col-span-5) */}
+                    <div className="col-span-5 min-w-0">
+                      <p className="text-xs sm:text-sm font-bold text-on-surface leading-tight truncate" title={item.name}>
+                        {item.name}
+                      </p>
+                      <input
+                        type="text"
+                        placeholder="Add kitchen note..."
+                        value={item.notes || ''}
+                        onChange={(e) => updateNote(idx, e.target.value)}
+                        className="w-full mt-1 bg-surface border border-outline-variant/80 hover:border-primary/60 focus:border-primary focus:ring-1 focus:ring-primary/25 rounded-lg px-2.5 py-1 text-[11px] font-medium outline-none text-on-surface placeholder:text-on-surface-variant/40 transition-colors shadow-2xs"
+                      />
+                    </div>
+
+                    {/* Col 2: Quantity [- 1 +] (col-span-3) */}
+                    <div className="col-span-3 flex justify-center">
+                      <div className="flex items-center gap-1 bg-surface border border-outline-variant/40 rounded-xl p-0.5 shadow-sm">
+                        <button
+                          onClick={() => updateQuantity(idx, -1)}
+                          className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center hover:bg-surface-container rounded-lg text-on-surface-variant hover:text-primary transition-colors press-effect cursor-pointer"
+                          title="Decrease quantity"
+                        >
+                          <Minus size={11} />
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity || ''}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val)) {
+                              setQuantity(idx, val);
+                            } else if (e.target.value === '') {
+                              setQuantity(idx, 0);
+                            }
+                          }}
+                          onBlur={() => {
+                            if (!item.quantity || item.quantity < 1) {
+                              setQuantity(idx, 1);
+                            }
+                          }}
+                          className="w-8 sm:w-10 text-center text-xs font-black text-on-surface bg-transparent outline-none p-0 hover:bg-surface-container/60 focus:bg-surface-container focus:ring-1 focus:ring-primary/40 rounded transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                          title="Click to type quantity directly (e.g. 15)"
+                        />
+                        <button
+                          onClick={() => updateQuantity(idx, 1)}
+                          className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center hover:bg-surface-container rounded-lg text-on-surface-variant hover:text-primary transition-colors press-effect cursor-pointer"
+                          title="Increase quantity"
+                        >
+                          <Plus size={11} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Col 3: Total Price (col-span-2) */}
+                    <div className="col-span-2 text-right">
+                      <p className="text-xs sm:text-sm font-black text-primary leading-tight">
+                        {formatCurrency(item.price * item.quantity)}
+                      </p>
+                      <p className="text-[9px] sm:text-[10px] text-on-surface-variant/60 font-semibold mt-0.5">
+                        {formatCurrency(item.price)} each
+                      </p>
+                    </div>
+
+                    {/* Col 4: Action Delete (col-span-2) */}
+                    <div className="col-span-2 flex justify-center">
+                      <button
+                        onClick={() => removeItem(idx)}
+                        className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-error-container/30 hover:bg-error-container text-error rounded-xl transition-all press-effect shadow-2xs cursor-pointer"
+                        title="Remove item"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </>
             )}
           </div>
 
@@ -750,7 +922,7 @@ export default function POSPage() {
                 <button
                   onClick={handleOpenPayFirstModal}
                   disabled={orderItems.length === 0 || isSubmitting}
-                  className="w-full py-3.5 bg-primary text-on-primary rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:brightness-110 press-effect shadow-lg shadow-primary/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full py-3.5 bg-primary text-on-primary rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:brightness-110 press-effect shadow-lg shadow-primary/25 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <CreditCard size={16} />
                   Pay & Place Order
@@ -760,7 +932,7 @@ export default function POSPage() {
                 <button
                   onClick={handlePlaceEatFirstOrder}
                   disabled={orderItems.length === 0 || isSubmitting}
-                  className="w-full py-3.5 bg-primary text-on-primary rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:brightness-110 press-effect shadow-lg shadow-primary/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full py-3.5 bg-primary text-on-primary rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:brightness-110 press-effect shadow-lg shadow-primary/25 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Save size={16} />
                   Place Order (Eat First)
@@ -777,7 +949,11 @@ export default function POSPage() {
       <FoodDetailsModal
         item={modalItem}
         onClose={() => setModalItem(null)}
-        onAddToCart={(payload) => addItem(payload)}
+        onAddToCart={(payload) => {
+          addItem(payload);
+          playSound.playBeep();
+          toast.success(`Added ${payload.name}`);
+        }}
       />
 
       {/* ── Pay First Payment Popup Modal ──────────────────────────────────── */}
@@ -798,7 +974,7 @@ export default function POSPage() {
               </div>
               <button
                 onClick={() => setIsPayFirstModalOpen(false)}
-                className="p-1 rounded-full hover:bg-surface-container text-on-surface-variant"
+                className="p-1 rounded-full hover:bg-surface-container text-on-surface-variant cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -856,7 +1032,7 @@ export default function POSPage() {
                       key={m.id}
                       type="button"
                       onClick={() => setPayFirstMethod(m.id as PaymentMethod)}
-                      className={`p-3 rounded-2xl border text-center flex flex-col items-center gap-1.5 transition-all ${
+                      className={`p-3 rounded-2xl border text-center flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
                         selected
                           ? 'border-2 border-primary bg-primary-container/20 text-primary font-bold shadow-sm'
                           : 'border-outline-variant/40 bg-surface text-on-surface-variant hover:border-outline-variant'
@@ -897,7 +1073,7 @@ export default function POSPage() {
               <button
                 type="button"
                 onClick={() => setIsPayFirstModalOpen(false)}
-                className="px-4 py-3 bg-surface-container hover:bg-surface-container-high rounded-xl text-xs font-bold"
+                className="px-4 py-3 bg-surface-container hover:bg-surface-container-high rounded-xl text-xs font-bold cursor-pointer"
               >
                 Cancel
               </button>
@@ -905,7 +1081,7 @@ export default function POSPage() {
                 type="button"
                 onClick={handleConfirmPayFirstOrder}
                 disabled={isSubmitting}
-                className="flex-1 py-3 bg-primary text-on-primary rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-md disabled:opacity-50"
+                className="flex-1 py-3 bg-primary text-on-primary rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <CheckCircle size={16} />
                 {isSubmitting ? 'Processing...' : 'Confirm & Print Payslips'}

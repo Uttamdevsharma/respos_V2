@@ -27,8 +27,9 @@ import Link from 'next/link';
 import { socket } from '../../lib/socket';
 import { useNotificationStore } from '../../store/notification.store';
 import { useBadgeStore } from '../../store/badge.store';
+import { useUIStore } from '../../store/ui.store';
 import { playSound } from '../../lib/sound';
-import api from '../../lib/api';
+import api, { BASE_URL } from '../../lib/api';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 
 export default function DashboardLayout({
@@ -41,9 +42,13 @@ export default function DashboardLayout({
   const { loadFromStorage, isAuthenticated, isHydrated, user, logout } = useAuthStore();
   const { addNotification } = useNotificationStore();
   const { kitchenCount, billingCount, ordersCount } = useBadgeStore();
+  const { isSidebarDrawerOpen, closeSidebarDrawer } = useUIStore();
   const [checking, setChecking] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [restaurantName, setRestaurantName] = useState(user?.restaurant?.name || 'Restaurant POS');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  const isZenPage = pathname === '/pos' || pathname.startsWith('/pos') || pathname === '/orders' || pathname.startsWith('/orders');
 
   useEffect(() => {
     loadFromStorage();
@@ -51,13 +56,17 @@ export default function DashboardLayout({
 
   // Load branding for mobile header / drawer
   useEffect(() => {
-    if (user?.restaurant?.name) {
-      setRestaurantName(user.restaurant.name);
-    } else {
-      api.get('/settings').then(({ data }) => {
-        if (data.success) setRestaurantName(data.data.restaurantName || 'Restaurant POS');
-      }).catch(() => {});
-    }
+    api.get('/settings').then(({ data }) => {
+      if (data.success && data.data) {
+        setRestaurantName(data.data.restaurantName || user?.restaurant?.name || 'Restaurant POS');
+        if (data.data.logo) {
+          const l = data.data.logo.startsWith('http') ? data.data.logo : `${BASE_URL}${data.data.logo}`;
+          setLogoUrl(l);
+        }
+      }
+    }).catch(() => {
+      if (user?.restaurant?.name) setRestaurantName(user.restaurant.name);
+    });
   }, [user]);
 
   useEffect(() => {
@@ -242,30 +251,42 @@ export default function DashboardLayout({
 
   return (
     <div className="h-screen w-screen bg-background text-on-surface flex flex-col overflow-hidden">
-      {/* ── 1. Full-Width Top Red Marquee Banner (Across entire screen) ── */}
-      <AnnouncementBanner />
+      {/* ── 1. Full-Width Top Red Marquee Banner (Hidden on POS/Orders to maximize screen) ── */}
+      {!isZenPage && <AnnouncementBanner />}
 
-      {/* Mobile Top Bar Header (visible on <md) */}
-      <header className="md:hidden h-16 bg-surface border-b border-outline-variant/30 flex items-center justify-between px-6 shrink-0 z-30 shadow-sm">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="p-1.5 hover:bg-surface-container-high rounded-xl text-on-surface-variant transition-all press-effect cursor-pointer"
-          >
-            <Menu size={22} />
-          </button>
-          <span className="text-base font-black text-primary-dark">{restaurantName}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <span className="px-2.5 py-1 bg-surface-container text-on-surface text-[10px] font-black rounded-lg uppercase tracking-wider">
-            {user?.role}
-          </span>
-        </div>
-      </header>
+      {/* Mobile Top Bar Header (visible on <md, hidden on POS/Orders since they have dedicated responsive header) */}
+      {!isZenPage && (
+        <header className="md:hidden h-16 bg-surface border-b border-outline-variant/30 flex items-center justify-between px-6 shrink-0 z-30 shadow-sm">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-1.5 hover:bg-surface-container-high rounded-xl text-on-surface-variant transition-all press-effect cursor-pointer shrink-0"
+            >
+              <Menu size={22} />
+            </button>
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt={restaurantName}
+                className="w-8 h-8 rounded-lg object-contain border border-outline-variant bg-surface shrink-0"
+              />
+            ) : null}
+            <span className="text-base font-black text-primary-dark truncate">{restaurantName}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <span className="px-2.5 py-1 bg-surface-container text-on-surface text-[10px] font-black rounded-lg uppercase tracking-wider">
+              {user?.role}
+            </span>
+          </div>
+        </header>
+      )}
 
-      {/* Mobile Drawer (visible on <md when open) */}
-      {mobileMenuOpen && (
+
+
+      {/* Mobile Drawer (visible on <md when open for non-POS pages) */}
+      {mobileMenuOpen && !isZenPage && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           {/* Backdrop mask */}
           <div
@@ -276,10 +297,20 @@ export default function DashboardLayout({
           {/* Drawer Content */}
           <div className="relative w-64 bg-surface h-full flex flex-col py-6 shadow-2xl z-50 transition-transform duration-300">
             {/* Header / Brand */}
-            <div className="px-6 mb-6 flex justify-between items-center">
-              <div>
-                <h1 className="text-lg font-black text-primary-dark">{restaurantName}</h1>
-                <p className="text-[10px] text-on-surface-variant mt-0.5">Active: {user?.name || 'Unknown'}</p>
+            <div className="px-6 mb-6 flex justify-between items-center gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                {logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoUrl}
+                    alt={restaurantName}
+                    className="w-10 h-10 rounded-xl object-contain border border-outline-variant bg-surface shrink-0"
+                  />
+                ) : null}
+                <div className="min-w-0">
+                  <h1 className="text-base font-black text-primary-dark truncate">{restaurantName}</h1>
+                  <p className="text-[10px] text-on-surface-variant mt-0.5 truncate">Active: {user?.name || 'Unknown'}</p>
+                </div>
               </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
@@ -331,10 +362,10 @@ export default function DashboardLayout({
         </div>
       )}
 
-      {/* ── 2. Body Container: Desktop Sidebar on Left + Main Content on Right ── */}
+      {/* ── 2. Body Container: Desktop Sidebar on Left (Hidden on POS) + Main Content on Right ── */}
       <div className="flex-1 flex flex-row min-h-0 overflow-hidden">
-        {/* Desktop Sidebar (visible on md+) */}
-        <Sidebar />
+        {/* Desktop Sidebar (visible on md+, hidden on POS/Orders for Fullscreen Zen Mode) */}
+        {!isZenPage && <Sidebar />}
 
         {/* Main Content Space */}
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">

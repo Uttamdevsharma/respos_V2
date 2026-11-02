@@ -450,10 +450,9 @@ export class OrderService {
   static async getWaiterOrders(waiterId: string, restaurantId: string): Promise<IOrder[]> {
     return Order.find({
       restaurant_id: restaurantId,
-      waiter: waiterId,
-      status: { $in: ['pending', 'preparing', 'ready', 'served'] },
     })
       .populate('table', 'number capacity location')
+      .populate('waiter', 'name')
       .sort({ createdAt: -1 });
   }
 
